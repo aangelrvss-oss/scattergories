@@ -29,7 +29,8 @@ export class CountdownTimer {
   constructor(options: TimerOptions) {
     this.durationMs = Math.max(0, options.durationMs);
     this.remaining = this.durationMs;
-    this.now = options.now ?? (() => Date.now());
+    // Reloj monotónico: no le afectan los cambios de hora del sistema.
+    this.now = options.now ?? defaultNow;
     this.tickMs = options.tickMs ?? 200;
     this.onTick = options.onTick;
     this.onFinish = options.onFinish;
@@ -134,6 +135,10 @@ export class CountdownTimer {
   private emit(): void {
     this.onTick?.(this.remainingMs, this.state);
   }
+}
+
+function defaultNow(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
 }
 
 /** Formatea milisegundos como m:ss redondeando hacia arriba (2:00, 0:09…). */

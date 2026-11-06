@@ -181,7 +181,7 @@ await test('temporizador: empezar, pausar, reanudar, reiniciar y alarma', async 
   await page.clock.install();
   await page.goto(`${BASE}/`);
   await ready(page);
-  const start = page.locator('[data-action="timer"]');
+  const start = page.locator('.timer [data-action="timer"]');
   await start.click();
   assert.equal(await page.locator('[data-el="timer"]').getAttribute('data-status'), 'running');
   await page.clock.runFor(5_000);
@@ -194,7 +194,7 @@ await test('temporizador: empezar, pausar, reanudar, reiniciar y alarma', async 
   await start.click(); // reanuda
   await page.clock.runFor(3_000);
   assert.equal(await timeOf(page), '1:52');
-  await page.getByRole('button', { name: 'Reiniciar', exact: true }).click();
+  await page.getByRole('button', { name: 'Reiniciar tiempo' }).click();
   assert.equal(await timeOf(page), '2:00');
   await page.clock.runFor(5_000);
   assert.equal(await timeOf(page), '2:00', 'tras reiniciar no sigue corriendo');
@@ -205,7 +205,7 @@ await test('temporizador: empezar, pausar, reanudar, reiniciar y alarma', async 
   await page.clock.runFor(61_000);
   assert.equal(await page.locator('[data-el="timer"]').getAttribute('data-status'), 'finished');
   assert.equal(await timeOf(page), '0:00');
-  assert.ok(await page.locator('[data-game]').evaluate((el) => el.classList.contains('is-timeup')));
+  assert.equal(await page.locator('[data-game]').getAttribute('data-phase'), 'stop');
   assert.match(await page.locator('[data-el="timer-announcer"]').textContent(), /Tiempo/);
   await context.close();
 });
@@ -220,7 +220,7 @@ await test('duración personalizada y nueva ronda reinicia el temporizador', asy
   await page.locator('input[name="sec"]').fill('45');
   await page.getByRole('button', { name: 'Aplicar' }).click();
   assert.equal(await timeOf(page), '0:45');
-  await page.locator('[data-action="timer"]').click();
+  await page.locator('.timer [data-action="timer"]').click();
   await page.clock.runFor(10_000);
   assert.equal(await timeOf(page), '0:35');
   await page.getByRole('button', { name: 'Nueva ronda' }).click();
@@ -338,25 +338,23 @@ await test('atajos de teclado', async () => {
   await context.close();
 });
 
-await test('pantalla completa', async () => {
+await test('modo presentación: pantalla completa, entrar y salir', async () => {
   const { page, context } = await newPage();
   await page.goto(`${BASE}/`);
   await ready(page);
-  const btn = page.locator('[data-action="fullscreen"]');
+  const btn = page.locator('[data-action="present"]');
+  assert.equal((await btn.textContent()).trim(), 'Presentar');
   await btn.click();
-  await page.waitForFunction(
-    () =>
-      document.fullscreenElement === document.querySelector('[data-game]') ||
-      document.querySelector('[data-game]').classList.contains('is-focus'),
-  );
-  assert.equal(await btn.getAttribute('aria-pressed'), 'true');
+  await page.waitForFunction(() => document.fullscreenElement === document.querySelector('[data-game]'));
+  assert.ok(await page.locator('[data-game]').evaluate((el) => el.classList.contains('is-present')));
+  assert.equal((await btn.textContent()).trim(), 'Salir');
   await btn.click();
-  await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('.is-focus'));
-  assert.equal(await btn.getAttribute('aria-pressed'), 'false');
+  await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('.is-present'));
+  assert.equal((await btn.textContent()).trim(), 'Presentar');
   await context.close();
 });
 
-await test('pantalla completa sin API (modo enfoque de respaldo)', async () => {
+await test('modo presentación sin API de pantalla completa (capa de respaldo)', async () => {
   const { page, context } = await newPage();
   await page.addInitScript(() => {
     // Simula un navegador sin API de pantalla completa (p. ej. Safari en iPhone).
@@ -365,23 +363,30 @@ await test('pantalla completa sin API (modo enfoque de respaldo)', async () => {
   });
   await page.goto(`${BASE}/`);
   await ready(page);
-  await page.locator('[data-action="fullscreen"]').click();
-  assert.ok(await page.locator('[data-game]').evaluate((el) => el.classList.contains('is-focus')));
+  await page.locator('[data-action="present"]').click();
+  const cls = () => page.locator('[data-game]').evaluate((el) => el.className);
+  assert.match(await cls(), /is-focus/);
+  assert.match(await cls(), /is-present/);
   await page.keyboard.press('Escape');
-  assert.ok(!(await page.locator('[data-game]').evaluate((el) => el.classList.contains('is-focus'))));
+  assert.doesNotMatch(await cls(), /is-present|is-focus/);
   await context.close();
 });
 
-await test('reiniciar partida', async () => {
+await test('nueva partida pide confirmación', async () => {
   const { page, context } = await newPage();
   await page.goto(`${BASE}/`);
   await ready(page);
   await page.getByRole('button', { name: 'Nueva ronda' }).click();
   await page.getByRole('button', { name: 'Nueva ronda' }).click();
-  await page.getByRole('button', { name: 'Reiniciar partida' }).click();
+  const reset = page.locator('[data-action="reset-game"]');
+  await reset.click();
+  assert.notEqual(await letterOf(page), '?', 'el primer toque no borra nada');
+  assert.match(await reset.textContent(), /Seguro/);
+  await reset.click();
   assert.equal(await letterOf(page), '?');
   assert.equal((await categoriesOf(page)).length, 0);
   assert.match(await page.locator('[data-el="round-label"]').textContent(), /Preparado/);
+  assert.match(await reset.textContent(), /Nueva partida/);
   await context.close();
 });
 
@@ -399,6 +404,305 @@ await test('funciona aunque localStorage esté bloqueado', async () => {
   await page.getByRole('button', { name: 'Nueva ronda' }).click();
   assert.equal((await categoriesOf(page)).length, 12);
   assert.deepEqual(errors, []);
+  await context.close();
+});
+
+
+console.log('\nCorrecciones de la auditoría');
+
+await test('móvil: la ronda nueva queda a la vista tras pulsar el botón fijo', async () => {
+  const { page, context } = await newPage({ viewport: { width: 375, height: 667 }, hasTouch: true, isMobile: true });
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('[data-action="new"]').tap();
+  await page.waitForTimeout(900); // desplazamiento suave
+  const view = await page.evaluate(() => {
+    const bar = document.querySelector('.game__actions').getBoundingClientRect();
+    const tile = document.querySelector('.tile').getBoundingClientRect();
+    const visible = [...document.querySelectorAll('.cats li')].filter((li) => {
+      const r = li.getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= bar.top;
+    }).length;
+    return { tileVisible: tile.top >= 0 && tile.bottom <= bar.top, visible, barOneRow: bar.height < 100 };
+  });
+  assert.ok(view.tileVisible, 'la letra debe verse entera');
+  assert.ok(view.visible >= 4, `categorías visibles: ${view.visible}`);
+  assert.ok(view.barOneRow, 'la barra fija debe ocupar una sola fila');
+  // El temporizador compacto de la barra controla la cuenta atrás.
+  await page.locator('.mini-timer').tap();
+  assert.equal(await page.locator('[data-game]').getAttribute('data-phase'), 'playing');
+  await context.close();
+});
+
+await test('cambiar la duración durante la cuenta atrás no la interrumpe', async () => {
+  const { page, context } = await newPage();
+  await page.clock.install();
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('[data-action="timer"]').first().click();
+  await page.clock.runFor(30_000);
+  await page.locator('[data-duration="180"]').click();
+  assert.equal(await page.locator('[data-el="timer"]').getAttribute('data-status'), 'running');
+  assert.equal(await timeOf(page), '1:30');
+  assert.match(await page.locator('[data-el="toast"]').textContent(), /próxima cuenta atrás/);
+  await page.getByRole('button', { name: 'Reiniciar tiempo' }).click();
+  assert.equal(await timeOf(page), '3:00', 'la nueva duración se aplica después');
+  await context.close();
+});
+
+await test('los atajos no actúan mientras se navega fuera del juego', async () => {
+  const { page, context } = await newPage();
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('.faq summary').first().focus();
+  await page.keyboard.press('n');
+  assert.equal(await letterOf(page), '?');
+  await page.locator('a[href="/basta/"]').first().focus();
+  await page.keyboard.press('t');
+  assert.equal(await page.locator('[data-el="timer"]').getAttribute('data-status'), 'idle');
+  await page.locator('[data-action="settings"]').focus();
+  await page.keyboard.press('n');
+  assert.notEqual(await letterOf(page), '?', 'con el foco en el juego sí funcionan');
+  await context.close();
+});
+
+await test('el historial conserva el orden tras recargar y al reactivar letras', async () => {
+  const { page, context } = await newPage();
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  const order = [];
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole('button', { name: 'Nueva ronda' }).click();
+    order.push(await letterOf(page));
+  }
+  await page.reload();
+  await ready(page);
+  assert.deepEqual(await page.locator('[data-el="used"] li').allTextContents(), order);
+
+  const first = order[0];
+  await page.locator('[data-action="settings"]').click();
+  await page.locator(`input[name="letters"][value="${first}"]`).click({ force: true });
+  await page.getByRole('button', { name: 'Listo' }).click();
+  await page.getByRole('button', { name: 'Otra letra' }).click();
+  await page.locator('[data-action="settings"]').click();
+  await page.locator(`input[name="letters"][value="${first}"]`).click({ force: true });
+  await page.getByRole('button', { name: 'Listo' }).click();
+  const used = await page.locator('[data-el="used"] li').allTextContents();
+  assert.ok(used.includes(first), `la ${first} sigue en el historial: ${used.join('')}`);
+  await context.close();
+});
+
+await test('dos pestañas comparten el historial sin pisarse', async () => {
+  const context = await browser.newContext();
+  const [a, b] = [await context.newPage(), await context.newPage()];
+  await a.goto(`${BASE}/`);
+  await b.goto(`${BASE}/`);
+  await ready(a);
+  await ready(b);
+  await a.getByRole('button', { name: 'Nueva ronda' }).click();
+  const la = await letterOf(a);
+  await b.waitForFunction((l) => document.querySelector('[data-el="letter"]').textContent.trim() === l, la);
+  await b.getByRole('button', { name: 'Nueva ronda' }).click();
+  const lb = await letterOf(b);
+  assert.notEqual(la, lb);
+  await a.reload();
+  await ready(a);
+  assert.deepEqual(await a.locator('[data-el="used"] li').allTextContents(), [la, lb]);
+  await context.close();
+});
+
+await test('ajustes: duración de la ronda desde el diálogo', async () => {
+  const { page, context } = await newPage();
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('[data-action="settings"]').click();
+  await page.getByLabel('Duración de cada ronda').selectOption('45');
+  await page.getByRole('button', { name: 'Listo' }).click();
+  assert.equal(await timeOf(page), '0:45');
+  assert.match(await page.locator('[data-action="custom-time"]').textContent(), /0:45/);
+  await context.close();
+});
+
+console.log('\nModo presentación (pantalla compartida)');
+
+// count: categorías de la prueba. En móviles se prueba la lista habitual (12);
+// en pantallas grandes, el máximo (20).
+const PRESENT_VIEWPORTS = [
+  { name: 'móvil vertical', width: 390, height: 844, count: 12 },
+  { name: 'móvil pequeño', width: 320, height: 568, count: 12 },
+  { name: 'móvil horizontal', width: 844, height: 390, count: 12 },
+  { name: 'tablet vertical', width: 768, height: 1024 },
+  { name: 'tablet horizontal', width: 1024, height: 768 },
+  { name: 'portátil', width: 1366, height: 768 },
+  { name: 'monitor', width: 1920, height: 1080 },
+  { name: 'tele 4K (escala 1)', width: 3840, height: 2160 },
+  { name: 'tele panorámica', width: 2560, height: 1080 },
+];
+
+/** Comprueba que letra, categorías y tiempo se ven enteros y sin solaparse. */
+async function presentLayout(page) {
+  return page.evaluate(() => {
+    const rect = (el) => el.getBoundingClientRect();
+    const inView = (r) => r.top >= -1 && r.left >= -1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1;
+    const overlap = (a, b) => !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+    const game = document.querySelector('[data-game]');
+    const tile = document.querySelector('.tile');
+    const timer = rect(document.querySelector('.timer'));
+    const boxEl = document.querySelector('.cats-box');
+    const box = rect(boxEl);
+    const scrollable = boxEl.classList.contains('is-scrollable');
+    // Si la lista se desplaza dentro de su caja, solo cuenta la parte visible.
+    const cats = [...document.querySelectorAll('.cats li')]
+      .map(rect)
+      .filter((r) => !scrollable || (r.bottom > box.top && r.top < box.bottom))
+      .map((r) => (scrollable ? new DOMRect(r.x, Math.max(r.top, box.top), r.width, Math.min(r.bottom, box.bottom) - Math.max(r.top, box.top)) : r));
+    const names = [...document.querySelectorAll('.cats__name')];
+    const controls = [...document.querySelectorAll('.game button')]
+      .filter((b) => b.offsetParent !== null && !b.closest('dialog') && !b.closest('.timer') && !b.closest('.game__bar'))
+      .map(rect);
+    return {
+      noScroll: game.scrollHeight <= game.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth,
+      tile: tile ? { ok: inView(rect(tile)), size: Math.round(rect(tile).height) } : null,
+      timerOk: inView(timer),
+      catsOk: cats.every(inView),
+      catsClipped: names.some((n) => n.scrollWidth > n.clientWidth + 1),
+      catFont: parseFloat(getComputedStyle(document.querySelector('.cats')).fontSize),
+      scrollable,
+      timerFont: parseFloat(getComputedStyle(document.querySelector('.timer__face')).fontSize),
+      catsOverlapTimer: cats.some((c) => overlap(c, timer)),
+      controlsOverCats: controls.some((b) => cats.some((c) => overlap(b, c))),
+      visibleButtons: [...game.querySelectorAll('button')].filter((b) => b.offsetParent !== null && !b.closest('dialog')).map((b) => b.dataset.action),
+    };
+  });
+}
+
+for (const vp of PRESENT_VIEWPORTS) {
+  await test(`presentación en ${vp.name} (${vp.width}×${vp.height})`, async () => {
+    const { page, context, errors } = await newPage({ viewport: { width: vp.width, height: vp.height } });
+    await page.clock.install();
+    await page.goto(`${BASE}/`);
+    await ready(page);
+    const count = vp.count ?? 20;
+    await page.locator('[data-action="settings"]').click();
+    await page.locator('input[name="categoryCount"]').fill(String(count));
+    await page.getByRole('button', { name: 'Listo' }).click();
+    await page.locator('[data-action="present"]').click();
+    await page.waitForFunction(() => document.querySelector('.is-present'));
+    await page.locator('[data-action="new"]').click();
+    await page.clock.runFor(500);
+    await page.waitForTimeout(150);
+
+    let m = await presentLayout(page);
+    assert.ok(m.noScroll, 'sin barras de desplazamiento');
+    assert.ok(m.tile.ok, 'la letra se ve entera');
+    assert.ok(m.timerOk, 'el tiempo se ve entero');
+    assert.ok(m.catsOk, `las ${count} categorías se ven`);
+    if (vp.width >= 390 && vp.height >= 600) assert.ok(!m.scrollable, 'la lista cabe entera sin desplazarse');
+    assert.ok(!m.catsClipped, 'ninguna categoría se corta');
+    assert.ok(!m.catsOverlapTimer && !m.controlsOverCats, 'nada tapa las categorías');
+    const minCat = vp.width >= 1900 ? 28 : 12;
+    assert.ok(m.catFont >= minCat, `categorías a ${m.catFont}px (mínimo ${minCat})`);
+    if (vp.width >= 1900) assert.ok(m.tile.size >= 300 && m.timerFont >= 80, `letra ${m.tile.size}px, tiempo ${m.timerFont}px`);
+
+    // Durante la cuenta atrás: letra y categorías siguen a la vista, controles mínimos.
+    await page.locator('.timer [data-action="timer"]').click();
+    await page.clock.runFor(1_000);
+    m = await presentLayout(page);
+    assert.ok(m.tile.ok && m.catsOk && m.timerOk, 'todo sigue visible durante la cuenta atrás');
+    const extra = m.visibleButtons.filter((a) => !['timer', 'timer-reset', 'settings', 'present'].includes(a));
+    assert.deepEqual(extra, [], `controles sobrantes durante la ronda: ${extra.join(', ')}`);
+
+    // Últimos 10 segundos y STOP.
+    await page.clock.runFor(110_000);
+    assert.ok(await page.locator('[data-game]').evaluate((el) => el.classList.contains('is-low')), 'aviso de poco tiempo');
+    await page.clock.runFor(10_000);
+    assert.equal(await page.locator('[data-game]').getAttribute('data-phase'), 'stop');
+    assert.ok(await page.locator('[data-el="stop-overlay"]').isVisible(), 'aviso grande de STOP');
+    if (vp.width === 1920) await page.screenshot({ path: `${shotsDir}presentacion-stop.png` });
+    await page.clock.runFor(4_000);
+    assert.ok(!(await page.locator('[data-el="stop-overlay"]').isVisible()), 'el aviso se retira para comparar respuestas');
+    m = await presentLayout(page);
+    assert.ok(m.tile.ok && m.catsOk, 'tras el STOP se ven letra y categorías para comparar');
+    assert.ok(m.visibleButtons.includes('new'), 'el anfitrión puede pasar a la siguiente ronda');
+    await page.locator('[data-action="new"]').click();
+    assert.equal(await page.locator('[data-game]').getAttribute('data-phase'), 'ready');
+    assert.equal(await timeOf(page), '2:00');
+    if (vp.width === 1920 || vp.width === 390) {
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: `${shotsDir}presentacion-${vp.width}.png` });
+    }
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+}
+
+await test('presentación: 20 categorías en un móvil pequeño siguen siendo legibles', async () => {
+  const { page, context } = await newPage({ viewport: { width: 320, height: 568 } });
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('[data-action="settings"]').click();
+  await page.locator('input[name="categoryCount"]').fill('20');
+  await page.getByRole('button', { name: 'Listo' }).click();
+  await page.locator('[data-action="present"]').click();
+  await page.waitForFunction(() => document.querySelector('.is-present'));
+  await page.locator('[data-action="new"]').click();
+  await page.waitForTimeout(300);
+  const m = await page.evaluate(() => {
+    const box = document.querySelector('.cats-box');
+    const game = document.querySelector('[data-game]');
+    return {
+      font: parseFloat(getComputedStyle(document.querySelector('.cats')).fontSize),
+      scrollable: box.classList.contains('is-scrollable') && box.scrollHeight > box.clientHeight,
+      focusable: box.getAttribute('tabindex') === '0',
+      gameFits: game.scrollHeight <= game.clientHeight + 1,
+    };
+  });
+  assert.ok(m.font >= 13, `tamaño ${m.font}px`);
+  assert.ok(m.scrollable && m.focusable, 'la lista se desplaza dentro de su caja (también con teclado)');
+  assert.ok(m.gameFits, 'letra y tiempo siguen fijos en pantalla');
+  await context.close();
+});
+
+await test('presentación en las páginas de letras y de categorías', async () => {
+  const { page, context } = await newPage({ viewport: { width: 1280, height: 720 } });
+  for (const [path, button] of [['/generador-letras/', 'Nueva letra'], ['/categorias-stop/', 'Nuevas categorías']]) {
+    await page.goto(`${BASE}${path}`);
+    await ready(page);
+    await page.locator('[data-action="present"]').click();
+    await page.waitForFunction(() => document.querySelector('.is-present'));
+    await page.getByRole('button', { name: button }).click();
+    await page.waitForTimeout(400);
+    const m = await page.evaluate(() => {
+      const g = document.querySelector('[data-game]');
+      const t = document.querySelector('.timer').getBoundingClientRect();
+      return { noScroll: g.scrollHeight <= g.clientHeight + 1, timer: t.bottom <= innerHeight && t.top >= 0 };
+    });
+    assert.ok(m.noScroll && m.timer, `${path}: diseño de presentación correcto`);
+    await page.locator('[data-action="present"]').click();
+    await page.waitForFunction(() => !document.querySelector('.is-present'));
+  }
+  await context.close();
+});
+
+await test('presentación: la pantalla no se apaga (Wake Lock)', async () => {
+  const { page, context } = await newPage();
+  await page.addInitScript(() => {
+    window.__wake = { requests: 0, releases: 0 };
+    Object.defineProperty(navigator, 'wakeLock', {
+      value: {
+        request: async () => {
+          window.__wake.requests++;
+          return { released: false, release: async () => void window.__wake.releases++ };
+        },
+      },
+    });
+  });
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.locator('[data-action="present"]').click();
+  await page.waitForFunction(() => window.__wake.requests === 1);
+  await page.locator('[data-action="present"]').click();
+  await page.waitForFunction(() => window.__wake.releases === 1);
   await context.close();
 });
 
@@ -431,7 +735,13 @@ await test('/categorias-stop/: solo categorías y columnas clásicas', async () 
   const cats = await categoriesOf(page);
   assert.equal(cats[0], 'Nombre');
   assert.equal(cats.length, 10);
+  assert.equal((await page.locator('[data-el="count"]').textContent()).trim(), '10', 'el selector muestra la lista real');
   assert.ok((await page.locator('.pack-list li').count()) >= 120);
+  // Las columnas clásicas no cambian el número de categorías de las rondas siguientes.
+  await page.goto(`${BASE}/`);
+  await ready(page);
+  await page.getByRole('button', { name: 'Otras categorías' }).click();
+  assert.equal((await categoriesOf(page)).length, 12);
   assert.deepEqual(errors, []);
   await context.close();
 });

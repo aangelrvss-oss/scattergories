@@ -11,6 +11,8 @@ import { copyText, formatRoundText } from '../utils/clipboard';
 import { getFullscreenElement, isFullscreenSupported, toggleFullscreen } from '../utils/fullscreen';
 import {
   getPool,
+  getRoundPhase,
+  type RoundPhase,
   rerollCategories,
   rerollLetter,
   resetGame,
@@ -34,6 +36,7 @@ import {
 import { playAlarm, playTick, unlockAudio } from '../utils/sound';
 import { createSafeStorage } from '../utils/storage';
 import { CountdownTimer, describeTime, formatTime, type TimerStatus } from '../utils/timer';
+import { keepScreenAwake } from '../utils/wakelock';
 
 const SETTINGS_KEY = 'letralista:settings:v1';
 const ROUND_KEY = 'letralista:round:v1';
@@ -44,6 +47,18 @@ const ICON_RESTORE =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></svg>';
 const ICON_CLOSE =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+const PHASE_LABELS: Record<RoundPhase, string> = {
+  empty: '',
+  ready: 'Preparados',
+  playing: '¡A escribir!',
+  paused: 'En pausa',
+  stop: '¡Stop! Comparad respuestas',
+};
+
+const NARROW_QUERY = '(max-width: 45.99rem)';
+/** Tamaño mínimo (px) de las categorías en modo presentación. */
+const MIN_PRESENT_FONT = 13;
 
 interface Preset {
   label: string;
@@ -67,6 +82,15 @@ export function initGame(root: HTMLElement): void {
 
   const dom = {
     roundLabel: el('round-label'),
+    phase: el('phase'),
+    presentLabel: el('present-label'),
+    timeMini: el('time-mini'),
+    timerActionMini: el('timer-action-mini'),
+    catsBox: el('cats-box'),
+    stopOverlay: el('stop-overlay'),
+    resetGame: el('reset-game'),
+    resetGameLabel: el('reset-game-label'),
+    durationSelect: el<HTMLSelectElement>('duration-select'),
     packName: el('pack-name'),
     tile: el('tile'),
     letter: el('letter'),
@@ -130,6 +154,17 @@ export function initGame(root: HTMLElement): void {
     if (dom.packName) {
       dom.packName.textContent = settings.customMode === 'only' ? 'Mis categorías' : getPack(settings.pack).name;
     }
+    updatePhase();
+  }
+
+  /** Fase visible de la ronda: preparados, a escribir, en pausa o stop. */
+  function updatePhase(): void {
+    const phase = getRoundPhase(state, timer.status);
+    if (root.dataset.phase === phase) return;
+    root.dataset.phase = phase;
+    if (dom.phase) dom.phase.textContent = PHASE_LABELS[phase];
+    // Al empezar o terminar la cuenta atrás cambian los controles visibles.
+    scheduleFit();
   }
 
   function renderLetter(animate = false): void {
@@ -180,6 +215,7 @@ export function initGame(root: HTMLElement): void {
     dom.cats.hidden = items.length === 0;
     if (dom.catsEmpty) dom.catsEmpty.hidden = items.length > 0;
     if (animate) restartAnimation(dom.cats, 'is-new');
+    scheduleFit();
     if (focus) {
       const target =
         dom.cats.querySelector<HTMLButtonElement>(`[data-${focus.kind}="${focus.index}"]`) ??
@@ -188,13 +224,19 @@ export function initGame(root: HTMLElement): void {
     }
   }
 
+  /** Número que muestra el selector: el de la lista actual, si la hay. */
+  function shownCount(): number {
+    return state.categories.length > 0 ? state.categories.length : settings.categoryCount;
+  }
+
   function renderCount(): void {
-    if (dom.count) dom.count.textContent = String(settings.categoryCount);
+    const shown = shownCount();
+    if (dom.count) dom.count.textContent = String(shown);
     if (dom.countOutput) dom.countOutput.textContent = String(settings.categoryCount);
     const down = action('count-down');
     const up = action('count-up');
-    if (down) down.disabled = settings.categoryCount <= MIN_CATEGORIES;
-    if (up) up.disabled = settings.categoryCount >= MAX_CATEGORIES;
+    if (down) down.disabled = shown <= MIN_CATEGORIES;
+    if (up) up.disabled = shown >= MAX_CATEGORIES;
   }
 
   function renderSound(): void {
@@ -211,6 +253,7 @@ export function initGame(root: HTMLElement): void {
     renderCount();
     renderSound();
     renderDurationChips();
+    updatePhase();
   }
 
   function iconButton(svg: string, label: string, title: string, data: Record<string, string>): HTMLButtonElement {
@@ -228,7 +271,7 @@ export function initGame(root: HTMLElement): void {
 
   function afterNewRound(): void {
     timer.reset(settings.timerSeconds * 1000);
-    root.classList.remove('is-timeup');
+    hideStopOverlay();
     if (settings.autoStartTimer) {
       unlockAudio();
       timer.start();
@@ -253,6 +296,19 @@ export function initGame(root: HTMLElement): void {
     renderLetter(true);
     renderCategories(true);
     afterNewRound();
+    revealGame();
+  }
+
+  /**
+   * En móvil, tras pulsar el botón (fijo abajo) la ronda nueva podría quedar
+   * fuera de la vista: subimos hasta el juego para que se vea la letra.
+   */
+  function revealGame(): void {
+    if (present || !window.matchMedia(NARROW_QUERY).matches) return;
+    const top = root.getBoundingClientRect().top;
+    if (top >= 0 && top < 24) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    root.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
   }
 
   function newLetter(): void {
@@ -273,12 +329,12 @@ export function initGame(root: HTMLElement): void {
   }
 
   function changeCount(delta: number): void {
-    setCount(settings.categoryCount + delta);
+    setCount(shownCount() + delta);
   }
 
   function setCount(value: number): void {
     const next = clampInt(value, MIN_CATEGORIES, MAX_CATEGORIES, settings.categoryCount);
-    if (next === settings.categoryCount) return renderCount();
+    if (next === settings.categoryCount && next === shownCount()) return renderCount();
     settings = { ...settings, categoryCount: next };
     saveSettings();
     // Ajusta la lista actual sin rehacerla entera.
@@ -352,12 +408,9 @@ export function initGame(root: HTMLElement): void {
 
   function loadPreset(): void {
     if (!preset) return;
+    // Solo cambia la lista de esta ronda: el número de categorías elegido en
+    // los ajustes se mantiene para las rondas siguientes.
     state = { ...state, categories: preset.categories.slice(0, MAX_CATEGORIES), round: Math.max(state.round, 1) };
-    settings = {
-      ...settings,
-      categoryCount: clampInt(state.categories.length, MIN_CATEGORIES, MAX_CATEGORIES, settings.categoryCount),
-    };
-    saveSettings();
     saveState();
     renderStatus();
     renderCount();
@@ -372,44 +425,165 @@ export function initGame(root: HTMLElement): void {
     toast('Historial de letras reiniciado: todas pueden volver a salir.');
   }
 
+  let resetConfirmTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  /** «Nueva partida» borra el historial: pide una segunda pulsación. */
+  function requestReset(): void {
+    if (dom.resetGame?.hasAttribute('data-confirm')) {
+      cancelResetConfirm();
+      resetAll();
+      return;
+    }
+    dom.resetGame?.setAttribute('data-confirm', '');
+    if (dom.resetGameLabel) dom.resetGameLabel.textContent = '¿Seguro? Pulsa otra vez';
+    clearTimeout(resetConfirmTimeout);
+    resetConfirmTimeout = setTimeout(cancelResetConfirm, 4000);
+  }
+
+  function cancelResetConfirm(): void {
+    clearTimeout(resetConfirmTimeout);
+    dom.resetGame?.removeAttribute('data-confirm');
+    if (dom.resetGameLabel) dom.resetGameLabel.textContent = 'Nueva partida';
+  }
+
   function resetAll(): void {
     state = resetGame();
     saveState();
     timer.reset(settings.timerSeconds * 1000);
-    root.classList.remove('is-timeup');
+    hideStopOverlay();
     renderAll();
-    toast('Partida reiniciada.');
+    toast('Partida nueva: historial de letras y rondas a cero.');
   }
 
-  // --------------------------------------------------------- pantalla completa
+  // -------------------------------------------------------- modo presentación
 
   const fsSupported = isFullscreenSupported();
-  const fsButton = action('fullscreen');
+  const presentButton = action('present');
+  let present = false;
 
-  function setFocusMode(on: boolean): void {
-    root.classList.toggle('is-focus', on);
-    document.documentElement.style.overflow = on ? 'hidden' : '';
-    fsButton?.setAttribute('aria-pressed', String(on));
+  /** Aplica (o quita) el diseño para pantalla compartida. */
+  function setPresent(on: boolean): void {
+    if (present === on) return;
+    present = on;
+    root.classList.toggle('is-present', on);
+    if (!on && root.classList.contains('is-focus')) {
+      root.classList.remove('is-focus');
+      document.documentElement.style.overflow = '';
+    }
+    if (dom.presentLabel) dom.presentLabel.textContent = on ? 'Salir' : 'Presentar';
+    if (presentButton) presentButton.title = on ? 'Salir del modo presentación (F)' : 'Modo presentación (F)';
+    keepScreenAwake(on);
+    if (!on) hideStopOverlay();
+    scheduleFit();
   }
 
-  async function fullscreen(): Promise<void> {
+  async function togglePresent(): Promise<void> {
+    if (present) {
+      if (getFullscreenElement()) {
+        try {
+          await toggleFullscreen(root);
+        } catch {
+          setPresent(false);
+        }
+      } else {
+        setPresent(false);
+      }
+      return;
+    }
     if (fsSupported) {
       try {
         await toggleFullscreen(root);
-        return;
+        return; // `fullscreenchange` activa el modo presentación
       } catch {
-        /* p. ej. bloqueado por el navegador: usamos el modo enfoque */
+        /* bloqueado por el navegador: usamos una capa a pantalla completa */
       }
     }
-    setFocusMode(!root.classList.contains('is-focus'));
+    root.classList.add('is-focus');
+    document.documentElement.style.overflow = 'hidden';
+    setPresent(true);
   }
 
-  document.addEventListener('fullscreenchange', () => {
-    fsButton?.setAttribute('aria-pressed', String(getFullscreenElement() === root));
-  });
-  document.addEventListener('webkitfullscreenchange', () => {
-    fsButton?.setAttribute('aria-pressed', String(getFullscreenElement() === root));
-  });
+  const onFullscreenChange = () => setPresent(getFullscreenElement() === root);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+  // ---- Ajuste automático del tamaño de las categorías en pantalla compartida
+
+  let fitFrame = 0;
+  function scheduleFit(): void {
+    if (!present) return;
+    cancelAnimationFrame(fitFrame);
+    fitFrame = requestAnimationFrame(fitCategories);
+  }
+
+  /**
+   * Busca el mayor tamaño de letra (y el número de columnas) con el que
+   * todas las categorías caben en su caja sin cortarse ni pasar de dos líneas.
+   */
+  function fitCategories(): void {
+    const list = dom.cats;
+    const box = dom.catsBox;
+    if (!present || !list || !box || state.categories.length === 0) return;
+    box.classList.remove('is-scrollable');
+    const width = box.clientWidth;
+    const height = box.clientHeight;
+    if (width === 0 || height === 0) return;
+
+    const names = [...list.querySelectorAll<HTMLElement>('.cats__name')];
+    const fits = (): boolean => {
+      if (list.scrollHeight > height + 1 || list.scrollWidth > width + 1) return false;
+      const fontPx = parseFloat(getComputedStyle(list).fontSize);
+      const maxNameHeight = fontPx * 1.2 * 2 + 2; // máximo dos líneas
+      return names.every((n) => n.scrollWidth <= n.clientWidth + 1 && n.offsetHeight <= maxNameHeight);
+    };
+
+    let best = { font: 0, cols: 1 };
+    const maxCols = Math.min(3, state.categories.length);
+    for (let cols = 1; cols <= maxCols; cols++) {
+      list.style.setProperty('--cats-cols', String(cols));
+      let lo = 8;
+      let hi = 160;
+      for (let i = 0; i < 10; i++) {
+        const mid = (lo + hi) / 2;
+        list.style.setProperty('--cats-font', `${mid}px`);
+        if (fits()) lo = mid;
+        else hi = mid;
+      }
+      // Preferimos menos columnas salvo que más columnas den letra claramente mayor.
+      if (lo > best.font * 1.08) best = { font: lo, cols };
+    }
+    // Nunca por debajo de un tamaño legible: si no caben (p. ej. 20 categorías
+    // en un móvil muy pequeño), la lista se desplaza dentro de su caja.
+    const tooSmall = best.font < MIN_PRESENT_FONT;
+    box.classList.toggle('is-scrollable', tooSmall);
+    if (tooSmall) box.setAttribute('tabindex', '0');
+    else box.removeAttribute('tabindex');
+    list.style.setProperty('--cats-cols', String(tooSmall ? 1 : best.cols));
+    list.style.setProperty('--cats-font', `${Math.floor(Math.max(best.font, MIN_PRESENT_FONT))}px`);
+  }
+
+  if (typeof ResizeObserver === 'function' && dom.catsBox) {
+    new ResizeObserver(() => scheduleFit()).observe(dom.catsBox);
+  }
+  window.addEventListener('resize', scheduleFit);
+  void document.fonts?.ready.then(scheduleFit);
+
+  // ---- Aviso grande de «¡STOP!» al terminar el tiempo
+
+  let overlayTimeout: ReturnType<typeof setTimeout> | undefined;
+  function showStopOverlay(): void {
+    if (!present || !dom.stopOverlay) return;
+    dom.stopOverlay.classList.add('is-visible');
+    clearTimeout(overlayTimeout);
+    overlayTimeout = setTimeout(hideStopOverlay, 3500);
+  }
+
+  function hideStopOverlay(): void {
+    clearTimeout(overlayTimeout);
+    dom.stopOverlay?.classList.remove('is-visible');
+  }
+
+  dom.stopOverlay?.addEventListener('click', hideStopOverlay);
 
   // -------------------------------------------------------------- temporizador
 
@@ -428,11 +602,17 @@ export function initGame(root: HTMLElement): void {
   }
 
   function renderTimer(remainingMs: number, status: TimerStatus): void {
-    if (dom.time) dom.time.textContent = formatTime(remainingMs);
+    const text = formatTime(remainingMs);
+    const low = status === 'running' && remainingMs <= 10_000;
+    if (dom.time) dom.time.textContent = text;
+    if (dom.timeMini) dom.timeMini.textContent = text;
+    if (dom.timerActionMini) dom.timerActionMini.textContent = TIMER_LABELS[status];
     if (dom.timer) {
       dom.timer.dataset.status = status;
-      dom.timer.classList.toggle('is-low', status === 'running' && remainingMs <= 10_000);
+      dom.timer.classList.toggle('is-low', low);
     }
+    root.classList.toggle('is-low', low);
+    updatePhase();
     if (dom.timerFill) {
       const ratio = timer.duration > 0 ? remainingMs / timer.duration : 0;
       dom.timerFill.style.transform = `scaleX(${Math.max(0, Math.min(1, ratio))})`;
@@ -457,9 +637,10 @@ export function initGame(root: HTMLElement): void {
     durationMs: settings.timerSeconds * 1000,
     onTick: (ms, status) => renderTimer(ms, status),
     onFinish: () => {
-      root.classList.add('is-timeup');
+      updatePhase();
+      showStopOverlay();
       announce('¡Tiempo! ¡Stop!');
-      toast('¡Tiempo! ¡Stop!');
+      if (!present) toast('¡Tiempo! ¡Stop!');
       if (settings.sound) playAlarm();
       try {
         navigator.vibrate?.([220, 120, 220]);
@@ -473,7 +654,9 @@ export function initGame(root: HTMLElement): void {
     unlockAudio();
     const before = timer.status;
     if (before === 'finished' || before === 'idle') {
-      root.classList.remove('is-timeup');
+      // Si se cambió la duración durante la cuenta anterior, se aplica ahora.
+      if (timer.duration !== settings.timerSeconds * 1000) timer.reset(settings.timerSeconds * 1000);
+      hideStopOverlay();
       lastAnnounced = -1;
       lastTickSecond = -1;
     }
@@ -491,7 +674,7 @@ export function initGame(root: HTMLElement): void {
 
   function resetTimer(): void {
     timer.reset(settings.timerSeconds * 1000);
-    root.classList.remove('is-timeup');
+    hideStopOverlay();
     lastAnnounced = -1;
     lastTickSecond = -1;
     announce(`Temporizador reiniciado: ${describeTime(timer.duration)}`);
@@ -501,9 +684,14 @@ export function initGame(root: HTMLElement): void {
     const value = clampInt(seconds, MIN_TIMER_SECONDS, MAX_TIMER_SECONDS, settings.timerSeconds);
     settings = { ...settings, timerSeconds: value };
     saveSettings();
-    timer.reset(value * 1000);
-    root.classList.remove('is-timeup');
     renderDurationChips();
+    if (timer.status === 'running' || timer.status === 'paused') {
+      // No interrumpimos una cuenta atrás en marcha por un toque accidental.
+      toast(`Duración ${formatTime(value * 1000)}: se aplicará en la próxima cuenta atrás.`);
+      return;
+    }
+    timer.reset(value * 1000);
+    hideStopOverlay();
     announce(`Duración: ${describeTime(value * 1000)}`);
   }
 
@@ -514,19 +702,33 @@ export function initGame(root: HTMLElement): void {
     });
     const custom = action('custom-time');
     if (custom) {
-      custom.textContent = isPreset ? 'Otro' : formatTime(settings.timerSeconds * 1000);
+      const text = isPreset ? 'Otro' : formatTime(settings.timerSeconds * 1000);
+      custom.textContent = text;
       custom.toggleAttribute('data-active', !isPreset);
-      custom.setAttribute(
-        'aria-label',
-        isPreset ? 'Otra duración' : `Duración personalizada: ${describeTime(settings.timerSeconds * 1000)}. Cambiar`,
-      );
+      // El nombre accesible empieza por el texto visible (WCAG 2.5.3).
+      if (isPreset) custom.removeAttribute('aria-label');
+      else custom.setAttribute('aria-label', `${text} (duración personalizada)`);
     }
+    renderDurationSelect();
     if (dom.customTime) {
       const min = dom.customTime.elements.namedItem('min') as HTMLInputElement | null;
       const sec = dom.customTime.elements.namedItem('sec') as HTMLInputElement | null;
       if (min) min.value = String(Math.floor(settings.timerSeconds / 60));
       if (sec) sec.value = String(settings.timerSeconds % 60);
     }
+  }
+
+  function renderDurationSelect(): void {
+    const select = dom.durationSelect;
+    if (!select) return;
+    const value = String(settings.timerSeconds);
+    select.querySelector('option[data-custom]')?.remove();
+    if (![...select.options].some((o) => o.value === value)) {
+      const option = new Option(`${formatTime(settings.timerSeconds * 1000)} (personalizada)`, value);
+      option.dataset.custom = '';
+      select.add(option);
+    }
+    select.value = value;
   }
 
   dom.customTime?.addEventListener('submit', (event) => {
@@ -701,6 +903,9 @@ export function initGame(root: HTMLElement): void {
         setLetters(checked);
         break;
       }
+      case 'timerSeconds':
+        setDuration(Number((target as unknown as HTMLSelectElement).value));
+        break;
       case 'autoStartTimer':
         settings = { ...settings, autoStartTimer: target.checked };
         saveSettings();
@@ -786,7 +991,7 @@ export function initGame(root: HTMLElement): void {
       case 'reset-letters':
         return resetLetters();
       case 'reset-game':
-        return resetAll();
+        return requestReset();
       case 'sound':
         settings = { ...settings, sound: !settings.sound };
         saveSettings();
@@ -794,8 +999,8 @@ export function initGame(root: HTMLElement): void {
         renderSound();
         toast(settings.sound ? 'Sonido activado.' : 'Sonido desactivado.');
         return;
-      case 'fullscreen':
-        return void fullscreen();
+      case 'present':
+        return void togglePresent();
       case 'settings':
         return openSettings();
       case 'timer':
@@ -836,9 +1041,13 @@ export function initGame(root: HTMLElement): void {
     if (dom.dialog?.open) return;
     const target = event.target as HTMLElement | null;
     if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    // Los atajos solo actúan con el foco en el juego (o sin foco en ningún
+    // control), nunca mientras se navega por enlaces o texto (WCAG 2.1.4).
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement && !root.contains(active)) return;
 
     if (event.key === 'Escape' && root.classList.contains('is-focus')) {
-      setFocusMode(false);
+      setPresent(false);
       return;
     }
 
@@ -846,7 +1055,7 @@ export function initGame(root: HTMLElement): void {
     const handlers: Record<string, () => void> = {
       n: newRound,
       t: toggleTimer,
-      f: () => void fullscreen(),
+      f: () => void togglePresent(),
     };
     if (mode === 'full') {
       handlers.l = newLetter;
@@ -856,6 +1065,22 @@ export function initGame(root: HTMLElement): void {
     if (handler) {
       event.preventDefault();
       handler();
+    }
+  });
+
+  // ------------------------------------------- sincronización entre pestañas
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === SETTINGS_KEY) {
+      settings = storage.read(SETTINGS_KEY, sanitizeSettings);
+      if (timer.status === 'idle' && timer.duration !== settings.timerSeconds * 1000) {
+        timer.reset(settings.timerSeconds * 1000);
+      }
+      renderAll();
+      if (dom.dialog?.open) renderSettingsForm();
+    } else if (event.key === ROUND_KEY) {
+      state = storage.read(ROUND_KEY, sanitizeRound);
+      renderAll();
     }
   });
 

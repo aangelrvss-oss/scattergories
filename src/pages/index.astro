@@ -9,7 +9,7 @@ import { DEFAULT_LETTERS } from '../data/letters/alphabet';
 import { faqPage, webApplication } from '../data/schema';
 import { SITE } from '../data/site';
 
-const title = 'Scattergories en español: generador de letras y categorías | LetraLista';
+const title = 'Generador de Scattergories en español | LetraLista';
 const description =
   'Genera una letra al azar y una lista de categorías para jugar a Scattergories, Stop, Basta o Tutti Frutti. Con temporizador, sin repetir letras y gratis.';
 
@@ -40,6 +40,10 @@ const faq = [
   {
     q: '¿Funciona en el móvil?',
     a: 'Sí, está pensado primero para móvil. Puedes dejar el teléfono en el centro de la mesa en pantalla completa con la cuenta atrás en marcha.',
+  },
+  {
+    q: '¿Se puede jugar en la tele o en un portátil?',
+    a: 'Sí. Abre la página en el navegador de la tele, el portátil o la tablet y pulsa «Presentar»: la letra, las categorías y el tiempo se adaptan a la pantalla para que se lean bien desde lejos.',
   },
   {
     q: '¿Cuántos jugadores pueden jugar?',
@@ -84,6 +88,20 @@ const jsonLd = [
             categoría por categoría.
           </li>
         </ol>
+      </section>
+
+      <section aria-labelledby="pantalla-compartida">
+        <h2 id="pantalla-compartida">Una pantalla para todo el grupo</h2>
+        <p>
+          Pulsa <strong>«Presentar»</strong> y deja el móvil, la tablet, el portátil o la tele donde todos lo vean. La
+          pantalla se convierte en el anfitrión de la partida: letra enorme, categorías en grande, cuenta atrás visible desde
+          el sofá y un aviso de <strong>¡STOP!</strong> imposible de ignorar. Mientras corre el tiempo solo quedan a la vista
+          los botones de pausa y reinicio, y la pantalla no se apaga sola en los navegadores compatibles.
+        </p>
+        <p>
+          Nadie tiene que escribir nada en el dispositivo: cada jugador usa su hoja de papel y, al acabar, comparáis las
+          respuestas y os apuntáis los puntos vosotros mismos.
+        </p>
       </section>
 
       <section aria-labelledby="puntuacion">

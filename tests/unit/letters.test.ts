@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LETTERS, DIFFICULT_LETTERS, SPANISH_ALPHABET } from '../../src/data/letters/alphabet';
-import { drawLetter, getAvailableLetters, normalizeLetters } from '../../src/utils/letters';
+import { drawLetter, getAvailableLetters, normalizeLetterSequence, normalizeLetters } from '../../src/utils/letters';
 import { createDefaultSettings } from '../../src/utils/settings';
 import { resetLetterHistory, rerollLetter, startNewRound } from '../../src/utils/game';
 import { createInitialRound } from '../../src/utils/settings';
@@ -67,10 +67,27 @@ describe('drawLetter', () => {
     expect(drawLetter(['Ñ'], [], null).letter).toBe('Ñ');
   });
 
-  it('ignora letras usadas que ya no están habilitadas', () => {
+  it('conserva en el historial las letras usadas aunque ya no estén activas', () => {
     const draw = drawLetter(['A', 'B'], ['Z', 'A']);
     expect(draw.letter).toBe('B');
-    expect(draw.usedLetters).toEqual(['A', 'B']);
+    expect(draw.usedLetters).toEqual(['Z', 'A', 'B']);
+  });
+
+  it('desactivar y volver a activar una letra no permite repetirla', () => {
+    const all = [...DEFAULT_LETTERS];
+    let used = ['M'];
+    // Se desactiva la M y se sigue jugando.
+    const withoutM = all.filter((l) => l !== 'M');
+    used = drawLetter(withoutM, used, 'M').usedLetters;
+    expect(used).toContain('M');
+    // Se vuelve a activar: la M sigue contando como usada.
+    for (let i = 0; i < all.length - 2; i++) {
+      const draw = drawLetter(all, used);
+      expect(draw.letter).not.toBe('M');
+      expect(draw.recycled).toBe(false);
+      used = draw.usedLetters;
+    }
+    expect(getAvailableLetters(all, used)).toHaveLength(0);
   });
 
   it('con una sola letra habilitada siempre sale esa', () => {
@@ -115,5 +132,11 @@ describe('historial', () => {
 describe('normalizeLetters', () => {
   it('normaliza, elimina inválidas y ordena según el alfabeto español', () => {
     expect(normalizeLetters(['ñ', 'a', 'Ñ', 'z', '1', 'ab', 5, ' o '])).toEqual(['A', 'Ñ', 'O', 'Z']);
+  });
+});
+
+describe('normalizeLetterSequence', () => {
+  it('conserva el orden, valida y elimina repetidas', () => {
+    expect(normalizeLetterSequence(['o', 'S', 'i', 'ñ', 'S', '?', 3, 'd'])).toEqual(['O', 'S', 'I', 'Ñ', 'D']);
   });
 });

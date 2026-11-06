@@ -18,6 +18,23 @@ export function normalizeLetters(letters: readonly unknown[]): string[] {
   return SPANISH_ALPHABET.filter((letter) => wanted.has(letter));
 }
 
+/**
+ * Valida una secuencia de letras conservando su orden (p. ej. el historial
+ * de letras sorteadas): mayúsculas, solo letras válidas y sin repetir.
+ */
+export function normalizeLetterSequence(letters: readonly unknown[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of letters) {
+    if (typeof raw !== 'string') continue;
+    const letter = raw.trim().toLocaleUpperCase('es');
+    if (!isSpanishLetter(letter) || seen.has(letter)) continue;
+    seen.add(letter);
+    result.push(letter);
+  }
+  return result;
+}
+
 /** Letras que todavía no han salido. */
 export function getAvailableLetters(enabled: readonly string[], used: readonly string[]): string[] {
   const usedSet = new Set(used);
@@ -26,7 +43,8 @@ export function getAvailableLetters(enabled: readonly string[], used: readonly s
 
 /**
  * Sortea una letra sin repetir hasta agotar el alfabeto habilitado.
- * Cuando se agota, el historial se reinicia automáticamente. Nunca se
+ * Cuando se agotan las letras activas, el historial se reinicia
+ * automáticamente. Nunca se
  * repite seguida la letra actual (`avoid`) si hay alternativas.
  */
 export function drawLetter(
@@ -37,8 +55,9 @@ export function drawLetter(
 ): LetterDraw {
   const enabled = enabledLetters.length > 0 ? normalizeLetters(enabledLetters) : [...DEFAULT_LETTERS];
   const pool = enabled.length > 0 ? enabled : [...DEFAULT_LETTERS];
-  // Solo cuentan las letras usadas que siguen habilitadas.
-  let used = usedLetters.filter((l) => isSpanishLetter(l) && pool.includes(l));
+  // El historial se conserva completo aunque cambien las letras activas:
+  // así, desactivar y volver a activar una letra no permite que se repita.
+  let used = normalizeLetterSequence(usedLetters);
   let available = getAvailableLetters(pool, used);
   let recycled = false;
 

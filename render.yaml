@@ -4,18 +4,21 @@ services:
   - type: web
     name: spanish-scattergories
     runtime: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
-      # Astro 7 necesita Node.js >= 22.23.4 (Render usa la última 22.x).
+      # Astro 7 exige Node.js >= 22.23.4; Node 24 (LTS) cumple con margen.
       - key: NODE_VERSION
-        value: "22"
+        value: "24"
       # URL pública: se usa en canonical, sitemap y Open Graph.
-      # Cámbiala si el nombre del servicio o el dominio son distintos.
+      # IMPORTANTE: compruébala tras el primer despliegue (Render puede
+      # asignar otro subdominio) y cámbiala si usas un dominio propio.
       - key: SITE_URL
         value: https://spanish-scattergories.onrender.com
+      - key: ASTRO_TELEMETRY_DISABLED
+        value: "1"
     headers:
-      # Los archivos de /_astro llevan hash en el nombre: caché de un año.
+      # Archivos con hash o versión en el nombre: caché de un año.
       - path: /_astro/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

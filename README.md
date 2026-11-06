@@ -1,6 +1,15 @@
 # LetraLista — generador de Scattergories en español
 
-Generador gratuito para jugar a **Scattergories, Stop, Basta o Tutti Frutti** en español: letra al azar sin repetir, listas de categorías, temporizador y ajustes, sin registro y sin backend.
+Juego de grupo en español para **Scattergories, Stop, Basta o Tutti Frutti**: una pantalla compartida (móvil, tablet, portátil o tele) hace de anfitrión con la letra, las categorías y la cuenta atrás, y cada jugador escribe en su hoja de papel. Sin registro y sin backend.
+
+## Cómo se juega una ronda
+
+1. El anfitrión elige el número de categorías y la duración (en Ajustes o en el propio juego).
+2. Pulsa **Presentar** para poner la pantalla en modo presentación (opcional, recomendado en grupo).
+3. Pulsa **Nueva ronda**: aparecen la letra y las categorías.
+4. Pulsa **Empezar**: los jugadores escriben en papel mientras corre el tiempo.
+5. Al llegar a cero aparece un **¡STOP!** grande; después se ven de nuevo letra y categorías para comparar respuestas. Los puntos los apunta el grupo.
+6. **Nueva ronda** para seguir (la letra nunca se repite hasta agotar el alfabeto).
 
 Es un sitio estático (Astro + TypeScript) listo para publicar en **Render** como Static Site.
 
@@ -14,7 +23,10 @@ Es un sitio estático (Astro + TypeScript) listo para publicar en **Render** com
 - **Categorías propias**: añadir y eliminar, y elegir entre mezclarlas con el pack, usar solo las tuyas o no usarlas.
 - **Rondas**: nueva ronda (letra + categorías), regenerar letra o categorías por separado, reiniciar partida.
 - **Temporizador**: 1:00, 1:30, 2:00, 3:00 o duración personalizada; empezar, pausar, reanudar y reiniciar. Basado en marcas de tiempo, así que no se desfasa si el móvil ralentiza la pestaña. Alarma sonora (Web Audio, sin archivos), vibración y aviso visual; anuncios para lectores de pantalla. Se reinicia al empezar una ronda nueva o reiniciar la partida.
-- **Copiar** la ronda al portapapeles, **imprimir** la hoja de juego, **pantalla completa** (con modo enfoque de respaldo en navegadores sin la API, como Safari en iPhone), activar/desactivar el **sonido** y **atajos de teclado** (N, L, C, T, F).
+- **Modo presentación** para pantalla compartida: pantalla completa (o una capa a pantalla completa en navegadores sin la API, como Safari en iPhone), letra enorme, categorías en rejilla que ajustan su tamaño automáticamente para caber y leerse de lejos, cuenta atrás grande, aviso visual de los últimos 10 segundos, **¡STOP!** a pantalla completa y estado de la ronda («Preparados», «¡A escribir!», «En pausa», «¡Stop!»). Durante la cuenta atrás solo quedan pausa, reinicio, ajustes y salir. La pantalla no se apaga mientras se presenta (Screen Wake Lock, donde el navegador lo admite). Probado de 320×568 a 3840×2160.
+- **Móvil:** tras pulsar «Nueva ronda» la página sube hasta la ronda; la barra fija inferior lleva el botón principal y un temporizador compacto.
+- **Copiar** la ronda al portapapeles, **imprimir** la hoja de juego, activar/desactivar el **sonido** y **atajos de teclado** (N, L, C, T, F) que solo actúan con el foco en el juego.
+- «Nueva partida» pide confirmación; cambiar la duración durante una cuenta atrás no la interrumpe (se aplica en la siguiente); dos pestañas abiertas comparten el historial sin pisarse.
 - Ajustes y estado de la partida guardados en `localStorage`; si no está disponible, la app sigue funcionando en memoria.
 - Modo oscuro automático, `prefers-reduced-motion`, foco visible y navegación completa con teclado.
 
@@ -32,7 +44,7 @@ Además: `404.html`, `sitemap.xml`, `robots.txt`, `manifest.webmanifest`, favico
 
 ## Requisitos
 
-- Node.js **22.23.4 o superior** (lo exige Astro 7). Ver `.node-version`.
+- Node.js **24** (recomendado; es la versión de `.node-version` y de Render) o **22.23.4 o superior**. Astro 7 se niega a arrancar con Node 22 anterior a 22.23.4.
 - npm 9.6.5 o superior.
 
 ## Instalación y desarrollo
@@ -91,24 +103,43 @@ git push -u origin main
 1. En [Render](https://dashboard.render.com), pulsa **New → Blueprint**.
 2. Conecta tu cuenta de GitHub y elige este repositorio.
 3. Render detecta `render.yaml` y crea el servicio `spanish-scattergories` (Static Site) con:
-   - Build command: `npm install && npm run build`
+   - Build command: `npm ci && npm run build`
    - Publish directory: `./dist`
-   - Variables: `NODE_VERSION=22` y `SITE_URL`
+   - Variables: `NODE_VERSION=24`, `SITE_URL` y `ASTRO_TELEMETRY_DISABLED=1`
    - Cabeceras de caché para `/_astro/*` y `/fonts/*`
 4. Pulsa **Apply**. Cada `git push` a la rama conectada vuelve a publicar el sitio.
 
 ### Opción B: Static Site manual
 
 1. **New → Static Site** y elige el repositorio.
-2. Build command: `npm install && npm run build`
+2. Build command: `npm ci && npm run build`
 3. Publish directory: `dist`
-4. En **Environment** añade `NODE_VERSION` = `22` y `SITE_URL` = la URL final del sitio.
+4. En **Environment** añade `NODE_VERSION` = `24` y `SITE_URL` = la URL final del sitio.
 
-### Después de publicar
+### Después de publicar (obligatorio antes de dar de alta en Google)
 
-- Si Render asigna otra URL (por ejemplo porque el nombre `spanish-scattergories` está ocupado) o usas un dominio propio, actualiza `SITE_URL` en Render y vuelve a desplegar para que la canonical y el sitemap apunten a la URL correcta.
-- No hace falta ninguna regla de reescritura: Astro genera una carpeta con `index.html` por ruta. Astro también genera `dist/404.html` como página de error.
-- Para Google: da de alta el sitio en Search Console y envía `https://<tu-url>/sitemap.xml`.
+1. **Comprueba la URL real** que asigna Render. Si no es `https://spanish-scattergories.onrender.com` (el nombre puede estar ocupado) o usas un dominio propio, cambia `SITE_URL` en Render y vuelve a desplegar. Si no, la etiqueta canonical, el sitemap y Open Graph apuntarán a otra dirección.
+2. Comprueba en el navegador:
+   - Las 5 rutas responden: `/`, `/generador-letras/`, `/categorias-stop/`, `/tutti-frutti/`, `/basta/`.
+   - `/no-existe/` muestra la página 404 propia (Astro genera `dist/404.html`; la documentación de Render no detalla este caso, así que hay que verlo).
+   - `/basta` (sin barra final) redirige o muestra la misma página; la canonical apunta a `/basta/`.
+   - «Ver código fuente»: la canonical y `og:url` usan la URL real; `/sitemap.xml` y `/robots.txt` también.
+   - `curl -I https://<tu-url>/_astro/<archivo>.js` devuelve `Cache-Control: public, max-age=31536000, immutable`.
+3. Prueba el **modo presentación** en un móvil real y, si puedes, en una tele: sonido con el interruptor de silencio del iPhone, pantalla que no se apaga, salida con «Salir».
+4. Da de alta el sitio en Search Console y envía `/sitemap.xml`.
+
+No hace falta ninguna regla de reescritura: Astro genera una carpeta con `index.html` por ruta.
+
+## Multijugador online (futuro)
+
+La versión actual es solo de pantalla compartida y no usa backend. La propuesta de arquitectura para salas online (códigos, QR, temporizador sincronizado, sesiones anónimas con Supabase) está en [`docs/multijugador.md`](docs/multijugador.md).
+
+## Limitaciones conocidas
+
+- En un móvil muy pequeño (320×568) con categorías largas, la lista puede desplazarse dentro de su caja en modo presentación antes de empezar la cuenta atrás (el tamaño mínimo de letra es 13 px; letra y tiempo siguen fijos).
+- Con la pantalla bloqueada o la pestaña en segundo plano, el navegador puede retrasar la alarma hasta que vuelvas; el tiempo restante sí es exacto. El modo presentación evita que la pantalla se apague donde el navegador lo permite.
+- La vibración no existe en iOS; el sonido depende del interruptor de silencio.
+- Las pruebas de navegador se ejecutan en Chromium; Safari y Firefox no se han probado de forma automática.
 
 ## Estructura del proyecto
 
@@ -134,13 +165,16 @@ git push -u origin main
 │       ├── random.ts         # Aleatoriedad sin sesgo (Web Crypto)
 │       ├── letters.ts        # Sorteo de letras sin repetición
 │       ├── categories.ts     # Pool, selección, sustitución y deduplicado
-│       ├── game.ts           # Rondas: nueva ronda, regenerar, reiniciar
+│       ├── game.ts           # Rondas: nueva ronda, regenerar, reiniciar, fase de la ronda
 │       ├── timer.ts          # Cuenta atrás
 │       ├── settings.ts       # Ajustes por defecto y saneado
 │       ├── storage.ts        # localStorage seguro con respaldo en memoria
 │       ├── clipboard.ts      # Copiar con respaldo
 │       ├── fullscreen.ts     # API de pantalla completa
+│       ├── wakelock.ts       # Mantener la pantalla encendida al presentar
 │       └── sound.ts          # Alarma con Web Audio
+├── docs/
+│   └── multijugador.md       # Propuesta de arquitectura para salas online
 └── tests/
     ├── unit/                 # Vitest
     └── e2e/                  # Playwright (navegador real)

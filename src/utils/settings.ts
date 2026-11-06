@@ -1,7 +1,7 @@
 import { DEFAULT_LETTERS } from '../data/letters/alphabet';
 import { DEFAULT_PACK_ID, isPackId } from '../data/categories';
 import type { CustomMode, RoundState, Settings } from '../types/game';
-import { normalizeLetters } from './letters';
+import { normalizeLetterSequence, normalizeLetters } from './letters';
 import { cleanCategoryName, dedupeCategories } from './categories';
 
 export const MIN_CATEGORIES = 5;
@@ -87,6 +87,6 @@ export function sanitizeRound(raw: unknown): RoundState {
     round: clampInt(raw.round, 0, 1_000_000, 0),
     letter: letter ?? null,
     categories: dedupeCategories(stringList(raw.categories).map(cleanCategoryName)).slice(0, MAX_CATEGORIES),
-    usedLetters: normalizeLetters(stringList(raw.usedLetters)),
+    usedLetters: normalizeLetterSequence(stringList(raw.usedLetters)),
   };
 }

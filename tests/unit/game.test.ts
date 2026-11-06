@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getPack } from '../../src/data/categories';
 import {
+  getRoundPhase,
   rerollCategories,
   rerollLetter,
   resetGame,
@@ -123,6 +124,10 @@ describe('ajustes', () => {
     }
   });
 
+  it('sanitizeRound conserva el orden en que salieron las letras', () => {
+    expect(sanitizeRound({ usedLetters: ['O', 'S', 'I', 'Ñ', 'D'] }).usedLetters).toEqual(['O', 'S', 'I', 'Ñ', 'D']);
+  });
+
   it('sanitizeRound valida el estado guardado', () => {
     expect(sanitizeRound({ round: 3, letter: 'ñ', categories: ['animal'], usedLetters: ['a', 'ñ', '?'] })).toEqual({
       round: 3,
@@ -131,5 +136,28 @@ describe('ajustes', () => {
       usedLetters: ['A', 'Ñ'],
     });
     expect(sanitizeRound('nope')).toEqual(createInitialRound());
+  });
+});
+
+describe('fase de la ronda', () => {
+  const settings = createDefaultSettings();
+  const empty = createInitialRound();
+  const round = startNewRound(empty, settings).state;
+
+  it('sin ronda: vacía, salvo que se use el temporizador por sí solo', () => {
+    expect(getRoundPhase(empty, 'idle')).toBe('empty');
+    expect(getRoundPhase(empty, 'running')).toBe('playing');
+    expect(getRoundPhase(empty, 'finished')).toBe('stop');
+  });
+
+  it('sigue al temporizador cuando hay ronda', () => {
+    expect(getRoundPhase(round, 'idle')).toBe('ready');
+    expect(getRoundPhase(round, 'running')).toBe('playing');
+    expect(getRoundPhase(round, 'paused')).toBe('paused');
+    expect(getRoundPhase(round, 'finished')).toBe('stop');
+  });
+
+  it('una lista sin letra (página de categorías) también es una ronda', () => {
+    expect(getRoundPhase({ ...empty, categories: ['Animal'] }, 'idle')).toBe('ready');
   });
 });

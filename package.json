@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Generador de Scattergories, Stop, Basta y Tutti Frutti en español.",
   "engines": {
-    "node": ">=22.23.4"
+    "node": ">=22.23.4 <25"
   },
   "scripts": {
     "dev": "astro dev",

@@ -5,6 +5,10 @@ import { SPANISH_ALPHABET, DIFFICULT_LETTERS } from '../data/letters/alphabet';
 import { MIN_CATEGORIES, MAX_CATEGORIES, DEFAULT_CATEGORY_COUNT } from '../utils/settings';
 import { MAX_CATEGORY_LENGTH } from '../utils/categories';
 import type { GeneratorMode } from '../types/game';
+import { formatTime } from '../utils/timer';
+
+/** Duraciones que se ofrecen en Ajustes (la personalizada se añade al vuelo). */
+const DURATION_OPTIONS = [30, 45, 60, 90, 120, 150, 180, 240, 300];
 
 interface Props {
   mode: GeneratorMode;
@@ -48,7 +52,7 @@ const showCategories = mode !== 'letters';
       {
         showCategories && (
           <fieldset class="settings__group">
-            <legend>Número de categorías por ronda</legend>
+            <legend id="cantidad-leyenda">Número de categorías por ronda</legend>
             <div class="range-row">
               <input
                 type="range"
@@ -58,7 +62,7 @@ const showCategories = mode !== 'letters';
                 max={MAX_CATEGORIES}
                 step="1"
                 value={DEFAULT_CATEGORY_COUNT}
-                aria-describedby="cantidad-valor"
+                aria-labelledby="cantidad-leyenda"
               />
               <output id="cantidad-valor" for="cantidad-categorias" data-el="count-output">
                 {DEFAULT_CATEGORY_COUNT}
@@ -158,6 +162,12 @@ const showCategories = mode !== 'letters';
 
       <fieldset class="settings__group">
         <legend>Temporizador y sonido</legend>
+        <div class="select-row">
+          <label for="duracion-ronda">Duración de cada ronda</label>
+          <select id="duracion-ronda" name="timerSeconds" data-el="duration-select">
+            {DURATION_OPTIONS.map((s) => <option value={s}>{formatTime(s * 1000)}</option>)}
+          </select>
+        </div>
         <label class="switch">
           <input type="checkbox" name="autoStartTimer" />
           <span>Empezar la cuenta atrás automáticamente en cada ronda</span>
@@ -462,6 +472,30 @@ const showCategories = mode !== 'letters';
   .custom-list .icon-btn svg {
     width: 1rem;
     height: 1rem;
+  }
+
+  .select-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .select-row label {
+    font-weight: 600;
+  }
+
+  .select-row select {
+    min-height: 2.5rem;
+    min-width: 7rem;
+    padding: 0.3rem 0.6rem;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-s);
+    background: var(--paper);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .radio-row {

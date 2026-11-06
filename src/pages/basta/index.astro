@@ -7,7 +7,7 @@ import PageIntro from '../../components/PageIntro.astro';
 import { TRADITIONAL_COLUMNS } from '../../data/categories';
 import { webApplication } from '../../data/schema';
 
-const title = 'Basta online: generador de letra y categorías para jugar | LetraLista';
+const title = 'Basta online: letra al azar y categorías | LetraLista';
 const description =
   'Juega Basta con letra al azar, columnas de siempre o categorías nuevas y cronómetro. Reglas, puntuación y cómo llevar el total de cada ronda.';
 const path = '/basta/';
@@ -68,7 +68,7 @@ const breadcrumbs = [
           Estas son las columnas más comunes en el Basta. Pulsa «Columnas de siempre» en el generador para cargarlas, o
           «Otras categorías» para variar:
         </p>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Ejemplo de hoja de Basta (desplazable)">
           <table class="sheet">
             <caption>Ejemplo de hoja de Basta con la letra M</caption>
             <thead>

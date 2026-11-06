@@ -31,18 +31,17 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
   aria-label={label}
   data-game
   data-mode={mode}
+  data-phase="empty"
   data-preset={presetData}
 >
   <div class="game__bar">
     <p class="game__status">
-      <span data-el="round-label">Preparado para jugar</span>
+      <span class="game__round" data-el="round-label">Preparado para jugar</span>
+      <span class="game__phase" data-el="phase"></span>
       {showCategories && (
-        <>
-          <span class="game__dot" aria-hidden="true">·</span>
-          <span>
-            Pack <strong data-el="pack-name">Clásico</strong>
-          </span>
-        </>
+        <span class="game__pack">
+          Pack <strong data-el="pack-name">Clásico</strong>
+        </span>
       )}
     </p>
     <div class="game__tools">
@@ -50,11 +49,6 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
         <Icon name="soundOn" class="icon-on" />
         <Icon name="soundOff" class="icon-off" />
         <span class="sr-only">Sonido</span>
-      </button>
-      <button class="icon-btn" type="button" data-action="fullscreen" aria-pressed="false" title="Pantalla completa (F)">
-        <Icon name="expand" class="icon-off" />
-        <Icon name="shrink" class="icon-on" />
-        <span class="sr-only">Pantalla completa</span>
       </button>
       <button
         class="icon-btn"
@@ -66,6 +60,11 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
       >
         <Icon name="settings" />
         <span class="sr-only">Ajustes</span>
+      </button>
+      <button class="btn btn--small present-btn" type="button" data-action="present" title="Modo presentación (F)">
+        <Icon name="expand" class="when-normal" />
+        <Icon name="shrink" class="when-present" />
+        <span data-el="present-label">Presentar</span>
       </button>
     </div>
   </div>
@@ -86,7 +85,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
             </span>
           </div>
           {mode !== 'letters' && (
-            <button class="btn btn--small" type="button" data-action="letter" title="Otra letra (L)">
+            <button class="btn btn--small host-secondary" type="button" data-action="letter" title="Otra letra (L)">
               <Icon name="dice" />
               Otra letra
             </button>
@@ -125,7 +124,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
               </button>
             </div>
           </div>
-          <div class="cats-box">
+          <div class="cats-box" data-el="cats-box">
             <p class="cats-empty" data-el="cats-empty">
               Pulsa <strong>{primaryLabel}</strong> para sacar {mode === 'categories' ? 'una lista' : 'letra y categorías'}.
             </p>
@@ -133,21 +132,21 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
           </div>
           <div class="cats-actions">
             {mode !== 'categories' && (
-              <button class="btn btn--small" type="button" data-action="categories" title="Otras categorías (C)">
+              <button class="btn btn--small host-secondary" type="button" data-action="categories" title="Otras categorías (C)">
                 <Icon name="refresh" />
                 Otras categorías
               </button>
             )}
-            <button class="btn btn--small" type="button" data-action="copy">
+            <button class="btn btn--small not-present" type="button" data-action="copy">
               <Icon name="copy" />
               <span data-el="copy-label">Copiar</span>
             </button>
-            <button class="btn btn--small" type="button" data-action="print">
+            <button class="btn btn--small not-present" type="button" data-action="print">
               <Icon name="print" />
               Imprimir hoja
             </button>
             {preset && (
-              <button class="btn btn--small" type="button" data-action="preset">
+              <button class="btn btn--small not-present" type="button" data-action="preset">
                 <Icon name="list" />
                 {preset.label}
               </button>
@@ -163,6 +162,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
         <div class="timer__face" role="timer" aria-labelledby="timer-label" data-el="time">
           {formatTime(DEFAULT_TIMER_SECONDS * 1000)}
         </div>
+        <span class="timer__stop" aria-hidden="true">¡STOP!</span>
       </div>
       <div class="timer__track" aria-hidden="true"><span class="timer__fill" data-el="timer-fill"></span></div>
       <div class="timer__presets" role="group" aria-label="Duración del temporizador">
@@ -196,7 +196,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
         </button>
         <button class="btn btn--ghost" type="button" data-action="timer-reset">
           <Icon name="reset" />
-          Reiniciar
+          Reiniciar tiempo
         </button>
       </div>
       <p class="sr-only" aria-live="polite" data-el="timer-announcer"></p>
@@ -204,20 +204,34 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
   </div>
 
   <div class="game__actions">
-    <button class="btn btn--primary game__main" type="button" data-action="new" title={`${primaryLabel} (N)`}>
-      {primaryLabel}
+    <button class="mini-timer" type="button" data-action="timer" data-el="mini-timer">
+      <Icon name="play" class="when-stopped" />
+      <Icon name="pause" class="when-running" />
+      <span class="sr-only">Temporizador:</span>
+      <span class="mini-timer__time" data-el="time-mini">{formatTime(DEFAULT_TIMER_SECONDS * 1000)}</span>
+      <span class="sr-only" data-el="timer-action-mini">Empezar</span>
     </button>
-    <button class="btn btn--ghost btn--small" type="button" data-action="reset-game">
-      <Icon name="reset" />
-      Reiniciar partida
+    <button class="btn btn--primary game__main host-secondary" type="button" data-action="new" title={`${primaryLabel} (N)`}>
+      {primaryLabel}
     </button>
   </div>
 
-  <p class="game__shortcuts">
-    Atajos de teclado: <kbd>N</kbd> {primaryLabel.toLowerCase()}
-    {mode === 'full' && <><kbd>L</kbd> letra · <kbd>C</kbd> categorías ·</>}
-    <kbd>T</kbd> temporizador · <kbd>F</kbd> pantalla completa
-  </p>
+  <div class="game__footer">
+    <button class="btn btn--ghost btn--small" type="button" data-action="reset-game" data-el="reset-game">
+      <Icon name="reset" />
+      <span data-el="reset-game-label">Nueva partida</span>
+    </button>
+    <p class="game__shortcuts">
+      Atajos: <kbd>N</kbd> {primaryLabel.toLowerCase()}
+      {mode === 'full' && <>· <kbd>L</kbd> letra · <kbd>C</kbd> categorías</>}
+      · <kbd>T</kbd> tiempo · <kbd>F</kbd> presentación
+    </p>
+  </div>
+
+  <div class="stop-overlay" data-el="stop-overlay" aria-hidden="true">
+    <span class="stop-overlay__word">¡STOP!</span>
+    <span class="stop-overlay__hint">Bolis abajo: comparad respuestas</span>
+  </div>
 
   <p class="toast" role="status" aria-live="polite" data-el="toast"></p>
 
@@ -248,36 +262,9 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     }
   }
 
-  .game:fullscreen,
-  .game.is-focus {
-    margin: 0;
-    border-radius: 0;
-    border: 0;
-    box-shadow: none;
-    overflow: auto;
-    background: var(--paper);
-    padding: max(var(--space-4), env(safe-area-inset-top)) max(var(--space-4), env(safe-area-inset-right))
-      max(var(--space-4), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
-  }
-
-  .game.is-focus {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-  }
-
-  .game:fullscreen .game__grid,
-  .game.is-focus .game__grid,
-  .game:fullscreen .game__bar,
-  .game.is-focus .game__bar,
-  .game:fullscreen .game__actions,
-  .game.is-focus .game__actions {
-    max-width: var(--maxw);
-    margin-inline: auto;
-  }
-
   .game__bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
@@ -287,6 +274,8 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
   }
 
   .game__status {
+    flex: 1 1 12rem;
+    min-width: 0;
     margin: 0;
     font-size: 0.95rem;
     color: var(--ink-soft);
@@ -297,14 +286,52 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     color: var(--ink);
   }
 
-  .game__dot {
-    margin-inline: 0.3rem;
+  .game__round {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .game__phase:empty {
+    display: none;
+  }
+
+  .game__phase::before,
+  .game__pack::before {
+    content: '·';
+    margin-inline: 0.35rem;
+    color: var(--ink-soft);
+  }
+
+  .game[data-phase='playing'] .game__phase {
+    color: var(--ok);
+    font-weight: 700;
+  }
+
+  .game[data-phase='stop'] .game__phase {
+    color: var(--accent);
+    font-weight: 800;
   }
 
   .game__tools {
     display: flex;
+    align-items: center;
     gap: var(--space-1);
-    margin-right: calc(var(--space-2) * -1);
+    flex: none;
+    margin-left: auto;
+  }
+
+  .present-btn {
+    min-height: 2.5rem;
+    margin-left: var(--space-1);
+  }
+
+  .game .when-present,
+  .game.is-present .when-normal {
+    display: none;
+  }
+
+  .game.is-present .when-present {
+    display: block;
   }
 
   .game__grid {
@@ -493,7 +520,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     display: none;
   }
 
-  .game.is-timeup .tile__stop {
+  .game[data-phase='stop'] .tile__stop {
     display: block;
   }
 
@@ -738,7 +765,7 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     color: var(--accent);
   }
 
-  .game.is-timeup .timer {
+  .game[data-phase='stop'] .timer {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent);
     animation: timeup 0.6s ease 3;
@@ -840,23 +867,26 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     min-width: 8.5rem;
   }
 
-  .timer .when-running {
+  .game .when-running,
+  .game[data-phase='playing'] .when-stopped {
     display: none;
   }
 
-  .timer[data-status='running'] .when-running {
+  .game[data-phase='playing'] .when-running {
     display: block;
   }
 
-  .timer[data-status='running'] .when-stopped {
+  .timer__stop {
     display: none;
+    font-family: var(--font-display);
+    font-weight: 800;
+    color: var(--accent);
   }
 
   /* ---------- Acciones ---------- */
 
   .game__actions {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
     margin-top: var(--space-5);
@@ -865,24 +895,53 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
   }
 
   .game__main {
-    flex: 1 1 9rem;
+    flex: 1 1 auto;
+  }
+
+  /* Temporizador compacto: solo en móvil, junto al botón principal, para
+     controlar la cuenta atrás sin perder de vista las categorías. */
+  .mini-timer {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 3.25rem;
+    padding: 0.4rem 0.9rem;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: none;
+  }
+
+  .mini-timer svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .game.is-low .mini-timer,
+  .game[data-phase='stop'] .mini-timer {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   @media (max-width: 45.99rem) {
+    .mini-timer {
+      display: inline-flex;
+    }
+
     .game__actions {
       position: sticky;
       bottom: 0;
       z-index: 5;
       margin-inline: calc(var(--space-4) * -1);
-      margin-bottom: calc(var(--space-4) * -1);
       padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
       background: var(--card);
-      border-radius: 0 0 var(--radius-l) var(--radius-l);
-    }
-
-    .game:fullscreen .game__actions,
-    .game.is-focus .game__actions {
-      background: var(--paper);
     }
   }
 
@@ -893,9 +952,23 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     }
   }
 
+  .game__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-3);
+  }
+
+  .game__footer [data-el='reset-game'][data-confirm] {
+    --btn-border: var(--accent);
+    color: var(--accent);
+  }
+
   .game__shortcuts {
     display: none;
-    margin: var(--space-3) 0 0;
+    margin: 0;
     font-size: 0.85rem;
     color: var(--ink-soft);
   }
@@ -950,6 +1023,444 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
     }
   }
 
+  /* ==========================================================================
+     Modo presentación: pantalla compartida para el grupo (móvil, tablet,
+     ordenador o tele). Pantalla completa real o, si el navegador no la
+     permite, una capa fija que ocupa toda la ventana.
+     ========================================================================== */
+
+  .game.is-present {
+    --present-gap: clamp(0.75rem, 2vmin, 2rem);
+    display: grid;
+    gap: var(--present-gap);
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    background: var(--paper);
+    padding: max(var(--present-gap), env(safe-area-inset-top)) max(var(--present-gap), env(safe-area-inset-right))
+      max(var(--present-gap), env(safe-area-inset-bottom)) max(var(--present-gap), env(safe-area-inset-left));
+    /* Horizontal (ordenador, tele, móvil tumbado) */
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'bar    bar'
+      'letter cats'
+      'timer  cats'
+      'actions actions';
+  }
+
+  .game.is-focus {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+  }
+
+  .game--letters.is-present {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'bar bar' 'letter timer' 'actions actions';
+  }
+
+  .game--categories.is-present {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.3fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'bar bar' 'cats timer' 'actions actions';
+  }
+
+  /* Vertical (móvil o tablet de pie) */
+  @media (max-aspect-ratio: 1/1) {
+    .game.is-present {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 0.42fr) minmax(0, 1fr) auto;
+      grid-template-areas:
+        'bar    bar'
+        'letter timer'
+        'cats   cats'
+        'actions actions';
+    }
+
+    .game--letters.is-present {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-areas: 'bar' 'letter' 'timer' 'actions';
+    }
+
+    .game--categories.is-present {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      grid-template-areas: 'bar' 'timer' 'cats' 'actions';
+    }
+  }
+
+  /* Móvil tumbado (poca altura): letra, categorías y tiempo en tres columnas */
+  @media (min-aspect-ratio: 1/1) and (max-height: 34rem) {
+    .game--full.is-present {
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 2.2fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'bar    bar  bar'
+        'letter cats timer'
+        'actions actions actions';
+    }
+
+    .game--full.is-present .timer {
+      align-self: center;
+    }
+  }
+
+  /* Móvil pequeño de pie: se priorizan letra, categorías y tiempo. «Otra
+     letra» y «Otras categorías» siguen disponibles al salir del modo. */
+  @media (max-aspect-ratio: 1/1) and (max-height: 41rem) {
+    .is-present [data-action='letter'],
+    .is-present [data-action='categories'] {
+      display: none !important;
+    }
+
+    .is-present .game__letter-col,
+    .is-present:not([data-phase='playing']):not([data-phase='paused']) .game__letter-col:has(.host-secondary) {
+      --tile: min(100cqw, 100cqh);
+    }
+  }
+
+  .game.is-present .game__grid {
+    display: contents;
+  }
+
+  /* Controles del anfitrión legibles también en una tele */
+  .is-present .btn--small {
+    font-size: clamp(0.9rem, 1.7vmin, 1.35rem);
+    min-height: clamp(2.5rem, 4.6vmin, 3.6rem);
+  }
+
+  .is-present .game__tools .icon-btn {
+    width: clamp(2.75rem, 5vmin, 4rem);
+    height: clamp(2.75rem, 5vmin, 4rem);
+  }
+
+  .is-present .game__tools .icon-btn svg {
+    width: 45%;
+    height: 45%;
+  }
+
+  .is-present .game__bar {
+    grid-area: bar;
+    margin: 0;
+    padding: 0 0 calc(var(--present-gap) * 0.6);
+  }
+
+  .is-present .game__status {
+    font-size: clamp(1rem, 2.6vmin, 2.2rem);
+  }
+
+  .is-present .game__phase {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* Lo que sobra en una pantalla compartida */
+  .is-present .used,
+  .is-present .cats-head,
+  .is-present .cats__tools,
+  .is-present .not-present,
+  .is-present .timer__label,
+  .is-present .timer__presets,
+  .is-present .custom-time,
+  .is-present .mini-timer,
+  .is-present .game__footer,
+  .is-present .tile__label,
+  .is-present [data-action='sound'] {
+    display: none !important;
+  }
+
+  /* Durante la cuenta atrás solo quedan pausa, reinicio y salida */
+  .is-present[data-phase='playing'] .host-secondary,
+  .is-present[data-phase='paused'] .host-secondary {
+    display: none !important;
+  }
+
+  /* ---- Letra ---- */
+
+  .is-present .game__letter-col {
+    grid-area: letter;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--present-gap) * 0.6);
+    min-height: 0;
+    min-width: 0;
+    --tile: min(40vh, 34vw);
+  }
+
+  @supports (container-type: size) {
+    .is-present .game__letter-col {
+      container-type: size;
+      --tile: min(100cqw, 100cqh);
+    }
+
+    .is-present:not([data-phase='playing']):not([data-phase='paused']) .game__letter-col:has(.host-secondary) {
+      --tile: min(100cqw, calc(100cqh - 3.5rem));
+    }
+  }
+
+  .is-present .tile {
+    width: var(--tile);
+    height: var(--tile);
+    aspect-ratio: auto;
+    flex: none;
+    border-width: max(3px, calc(var(--tile) * 0.012));
+    box-shadow: calc(var(--tile) * 0.03) calc(var(--tile) * 0.03) 0 var(--accent),
+      calc(var(--tile) * 0.03) calc(var(--tile) * 0.03) 0 2px var(--ink);
+  }
+
+  .is-present .tile__letter,
+  .game--letters.is-present .tile__letter {
+    font-size: calc(var(--tile) * 0.72);
+  }
+
+  .is-present .tile__stop {
+    font-size: calc(var(--tile) * 0.1);
+  }
+
+  /* ---- Categorías ---- */
+
+  .is-present .game__cats-col {
+    grid-area: cats;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .is-present .cats-box {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .is-present .cats-box.is-scrollable {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .is-present .cats {
+    /* El tamaño de letra lo ajusta el script para que todo quepa. */
+    font-size: var(--cats-font, 1.5rem);
+    grid-template-columns: repeat(var(--cats-cols, 2), minmax(0, 1fr));
+    grid-auto-flow: row;
+    column-gap: 1.2em;
+  }
+
+  .is-present .cats li {
+    min-height: 0;
+    padding-block: 0.28em;
+    gap: 0.4em;
+    border-bottom-width: max(1.5px, 0.06em);
+  }
+
+  .is-present .cats li::before {
+    width: 1.6em;
+    font-size: 0.8em;
+  }
+
+  .is-present .cats__name {
+    font-size: 1em;
+    line-height: 1.2;
+    font-weight: 650;
+  }
+
+  .is-present .cats-empty {
+    font-size: clamp(1rem, 3vmin, 2rem);
+  }
+
+  .is-present .cats-actions {
+    margin-top: calc(var(--present-gap) * 0.6);
+  }
+
+  /* ---- Temporizador ---- */
+
+  .is-present .timer {
+    grid-area: timer;
+    align-self: end;
+    min-width: 0;
+    container-type: inline-size;
+    padding: calc(var(--present-gap) * 0.7) var(--present-gap);
+    border-width: 3px;
+  }
+
+  .game--letters.is-present .timer,
+  .game--categories.is-present .timer {
+    align-self: center;
+  }
+
+  .is-present .timer__top {
+    justify-content: center;
+  }
+
+  .is-present .timer__face {
+    font-size: clamp(2.5rem, 14vmin, 9rem);
+    line-height: 1;
+  }
+
+  @supports (container-type: inline-size) {
+    .is-present .timer__face {
+      font-size: min(30cqi, 22vh);
+    }
+  }
+
+  .is-present .timer__track {
+    height: max(6px, 1vmin);
+  }
+
+  .is-present .timer__controls {
+    justify-content: center;
+    margin-top: calc(var(--present-gap) * 0.5);
+  }
+
+  .is-present .timer__start {
+    font-size: clamp(1rem, 2.4vmin, 1.6rem);
+    min-height: clamp(2.875rem, 6vmin, 4.5rem);
+    padding-inline: 1.4em;
+  }
+
+  .is-present [data-action='timer-reset'] {
+    font-size: clamp(0.95rem, 2vmin, 1.3rem);
+  }
+
+  .is-present.is-low .timer {
+    background: var(--accent);
+    border-color: var(--ink);
+    color: var(--on-accent);
+    animation: low-pulse 1s ease-in-out infinite;
+  }
+
+  .is-present.is-low .timer__fill {
+    background: var(--on-accent);
+  }
+
+  .is-present.is-low .timer__face {
+    color: var(--on-accent);
+  }
+
+  .is-present.is-low .timer .btn {
+    --btn-bg: var(--card);
+    --btn-fg: var(--ink);
+  }
+
+  @keyframes low-pulse {
+    50% {
+      transform: scale(1.025);
+    }
+  }
+
+  .is-present[data-phase='stop'] .timer {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--ink);
+    animation: none;
+  }
+
+  .is-present[data-phase='stop'] .timer__face {
+    display: none;
+  }
+
+  .is-present[data-phase='stop'] .timer__stop {
+    display: block;
+    color: var(--on-accent);
+    font-size: clamp(2.5rem, 14vmin, 9rem);
+    line-height: 1;
+  }
+
+  @supports (container-type: inline-size) {
+    .is-present[data-phase='stop'] .timer__stop {
+      font-size: min(28cqi, 22vh);
+    }
+  }
+
+  .is-present[data-phase='stop'] .timer__track {
+    visibility: hidden;
+  }
+
+  .is-present[data-phase='stop'] .timer .btn {
+    --btn-bg: var(--card);
+    --btn-fg: var(--ink);
+  }
+
+  /* ---- Acciones del anfitrión ---- */
+
+  .is-present .game__actions {
+    grid-area: actions;
+    position: static;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    justify-content: center;
+  }
+
+  .is-present[data-phase='playing'] .game__actions,
+  .is-present[data-phase='paused'] .game__actions {
+    display: none;
+  }
+
+  .is-present .game__main {
+    flex: 0 1 auto;
+    min-width: min(100%, 20rem);
+    font-size: clamp(1.1rem, 2.8vmin, 1.9rem);
+    min-height: clamp(3.25rem, 7vmin, 5rem);
+  }
+
+  /* ---- Aviso de fin de tiempo ---- */
+
+  .stop-overlay {
+    display: none;
+  }
+
+  .is-present .stop-overlay.is-visible {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1vmin;
+    background: rgb(199 54 26 / 0.94);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    animation: stop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  }
+
+  .stop-overlay__word {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: min(30vmin, 22vw);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .stop-overlay__hint {
+    font-weight: 700;
+    font-size: clamp(1.1rem, 4vmin, 2.6rem);
+  }
+
+  @keyframes stop-in {
+    from {
+      opacity: 0;
+      transform: scale(1.15);
+    }
+  }
+
+  /* El aviso en pantalla y la ficha también lo marcan */
+  .is-present[data-phase='stop'] .tile {
+    border-color: var(--accent);
+  }
+
   /* ---------- Impresión: hoja de juego ---------- */
 
   @media print {
@@ -987,6 +1498,8 @@ const presetData = preset ? JSON.stringify(preset) : undefined;
 
     .game__bar,
     .game__actions,
+    .game__footer,
+    .stop-overlay,
     .game__shortcuts,
     .timer,
     .used,

@@ -1,4 +1,5 @@
 import type { RandomInt, RoundState, Settings } from '../types/game';
+import type { TimerStatus } from './timer';
 import { secureRandomInt } from './random';
 import { drawLetter } from './letters';
 import { buildCategoryPool, pickCategories, replaceCategory } from './categories';
@@ -64,4 +65,26 @@ export function resetLetterHistory(state: RoundState): RoundState {
 /** Reinicia la partida completa. */
 export function resetGame(): RoundState {
   return createInitialRound();
+}
+
+/**
+ * Fase de la ronda, derivada del estado y del temporizador. Es la misma
+ * información que mostraría cualquier pantalla (o, en el futuro, cualquier
+ * dispositivo conectado a una sala): por eso vive en el motor, no en la UI.
+ */
+export type RoundPhase = 'empty' | 'ready' | 'playing' | 'paused' | 'stop';
+
+export function getRoundPhase(state: RoundState, timerStatus: TimerStatus): RoundPhase {
+  // Sin ronda generada y sin usar el temporizador: pantalla de inicio.
+  if (!state.letter && state.categories.length === 0 && timerStatus === 'idle') return 'empty';
+  switch (timerStatus) {
+    case 'running':
+      return 'playing';
+    case 'paused':
+      return 'paused';
+    case 'finished':
+      return 'stop';
+    default:
+      return 'ready';
+  }
 }

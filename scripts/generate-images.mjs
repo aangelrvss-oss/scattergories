@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
 
 const root = new URL('..', import.meta.url);
 const out = (name) => fileURLToPath(new URL(`public/${name}`, root));
-const fontData = readFileSync(new URL('public/fonts/bricolage-grotesque-latin-wght.woff2', root)).toString('base64');
+const fontData = readFileSync(new URL('public/fonts/bricolage-grotesque-latin-wght.v1.woff2', root)).toString('base64');
 const fontFace = `@font-face{font-family:B;src:url(data:font/woff2;base64,${fontData}) format('woff2');font-weight:200 800}`;
 
 const icon = (size, padding = 0) => `<!doctype html><html><head><style>
