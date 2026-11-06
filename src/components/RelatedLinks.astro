@@ -1,0 +1,35 @@
+---
+import { NAV } from '../data/site';
+
+interface Props {
+  current: string;
+  title?: string;
+}
+
+const DESCRIPTIONS: Record<string, string> = {
+  '/': 'Letra, categorías y temporizador para jugar una ronda completa.',
+  '/generador-letras/': 'Solo la letra: sin repeticiones y con el alfabeto a tu gusto.',
+  '/categorias-stop/': 'Listas de categorías al azar y más de 250 ideas por temática.',
+  '/tutti-frutti/': 'Reglas, columnas clásicas y generador para el Tutti Frutti.',
+  '/basta/': 'Cómo se juega al Basta, puntuación y columnas habituales.',
+};
+
+const { current, title = 'Más herramientas para jugar' } = Astro.props;
+const links = NAV.filter((item) => item.href !== current);
+---
+
+<section aria-labelledby="mas-herramientas">
+  <h2 id="mas-herramientas">{title}</h2>
+  <ul class="card-links">
+    {
+      links.map((item) => (
+        <li>
+          <a href={item.href}>
+            <strong>{item.label}</strong>
+            <span>{DESCRIPTIONS[item.href]}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>

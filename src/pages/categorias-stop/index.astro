@@ -1,0 +1,154 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Generator from '../../components/Generator.astro';
+import Faq from '../../components/Faq.astro';
+import RelatedLinks from '../../components/RelatedLinks.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import { PACKS, TRADITIONAL_COLUMNS } from '../../data/categories';
+import { webApplication } from '../../data/schema';
+
+const title = 'Categorías para Stop: listas aleatorias y más de 250 ideas | LetraLista';
+const description =
+  'Generador de listas de categorías para jugar a Stop, con packs fácil, difícil, divertido, creativo y de cultura general. Copia o imprime la lista y añade las tuyas.';
+const path = '/categorias-stop/';
+const total = PACKS.reduce((sum, pack) => sum + pack.categories.length, 0);
+
+const faq = [
+  {
+    q: '¿Cuántas categorías se suelen poner en el Stop?',
+    a: 'Entre 8 y 12 es lo más habitual con un minuto y medio o dos minutos. Con niños funcionan mejor 5 o 6, y para partidas largas puedes subir hasta 20.',
+  },
+  {
+    q: '¿Puedo mezclar categorías de varios packs?',
+    a: 'Cada ronda usa un solo pack para que la dificultad sea coherente. Si quieres una mezcla a tu medida, añade tus categorías favoritas en «Mis categorías» y elige «Solo las mías».',
+  },
+  {
+    q: '¿Cómo quito una categoría que no me gusta?',
+    a: 'Pulsa la ✕ junto a la categoría. Se sustituye por otra y no volverá a salir. Puedes recuperarla cuando quieras desde Ajustes.',
+  },
+];
+
+const jsonLd = [webApplication(Astro.site!, path, 'Generador de categorías para Stop', description)];
+const breadcrumbs = [
+  { name: 'Inicio', path: '/' },
+  { name: 'Categorías para Stop', path },
+];
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} breadcrumbs={breadcrumbs}>
+  <div class="wrap print-host">
+    <PageIntro
+      title="Categorías para Stop"
+      lead="Genera una lista de categorías al azar para tu partida, cópiala en el grupo o imprímela. Si ya tenéis la letra, no necesitas nada más."
+    />
+    <Generator
+      mode="categories"
+      label="Generador de categorías para Stop"
+      preset={{ label: 'Columnas clásicas', categories: TRADITIONAL_COLUMNS.stop }}
+    />
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <section aria-labelledby="elegir">
+        <h2 id="elegir">Cómo elegir buenas categorías</h2>
+        <ul>
+          <li>
+            <strong>Mezcla fáciles y difíciles.</strong> Un par de categorías amplias («Objeto», «Comida») garantizan que
+            nadie se quede en blanco; una o dos específicas («Hueso del cuerpo») deciden la partida.
+          </li>
+          <li>
+            <strong>Adapta la lista al grupo.</strong> Con peques, el pack Fácil; con amigos que se pican, Difícil o Cultura
+            general; para reír, Divertido o Creativo.
+          </li>
+          <li>
+            <strong>Mantén la lista varias rondas.</strong> Lo clásico es jugar varias letras con las mismas categorías: pulsa
+            «Nueva letra» en el <a href="/">generador completo</a> sin cambiar la lista.
+          </li>
+          <li>
+            <strong>Pactad qué vale.</strong> ¿Vale «Nueva York» en «Ciudad» con la N? ¿Cuentan las marcas? Decidirlo antes
+            ahorra discusiones.
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="all-cats" aria-labelledby="todas">
+      <h2 id="todas">Todas las categorías ({total})</h2>
+      <p class="lead">
+        Estas son todas las categorías que usa el generador, organizadas por pack. Úsalas como inspiración o elige las tuyas
+        a mano.
+      </p>
+      <div class="all-cats__grid">
+        {
+          PACKS.map((pack) => (
+            <section class="pack-list" aria-labelledby={`pack-${pack.id}`}>
+              <h3 id={`pack-${pack.id}`}>
+                {pack.name} <span>({pack.categories.length})</span>
+              </h3>
+              <p>{pack.description}</p>
+              <ul>
+                {pack.categories.map((category) => (
+                  <li>{category}</li>
+                ))}
+              </ul>
+            </section>
+          ))
+        }
+      </div>
+    </section>
+
+    <div class="prose">
+      <Faq items={faq} />
+    </div>
+
+    <RelatedLinks current={path} />
+  </div>
+</BaseLayout>
+
+<style>
+  .all-cats {
+    margin-top: var(--space-7);
+  }
+
+  .all-cats__grid {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    margin-top: var(--space-4);
+  }
+
+  .pack-list {
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: var(--space-4);
+  }
+
+  .pack-list h3 {
+    margin: 0 0 var(--space-1);
+  }
+
+  .pack-list h3 span {
+    color: var(--ink-soft);
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .pack-list p {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin-bottom: var(--space-3);
+  }
+
+  .pack-list ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.97rem;
+    line-height: 1.5;
+  }
+
+  .pack-list li::marker {
+    color: var(--accent);
+  }
+</style>

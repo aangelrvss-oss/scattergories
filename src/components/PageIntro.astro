@@ -1,0 +1,33 @@
+---
+interface Props {
+  title: string;
+  lead: string;
+}
+const { title, lead } = Astro.props;
+---
+
+<div class="intro">
+  <h1>{title}</h1>
+  <p class="lead">{lead}</p>
+</div>
+
+<style>
+  .intro {
+    padding-top: var(--space-5);
+  }
+
+  .intro h1 {
+    max-width: 22ch;
+    margin-bottom: var(--space-2);
+  }
+
+  .intro .lead {
+    margin-bottom: 0;
+  }
+
+  @media (min-width: 48rem) {
+    .intro {
+      padding-top: var(--space-6);
+    }
+  }
+</style>

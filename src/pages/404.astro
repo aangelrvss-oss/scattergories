@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Página no encontrada | LetraLista"
+  description="La página que buscas no existe. Vuelve al generador de Scattergories en español."
+  path="/404/"
+  noindex
+>
+  <div class="wrap notfound">
+    <p class="notfound__tile" aria-hidden="true">?</p>
+    <h1>Esta página no existe</h1>
+    <p class="lead">Quizá la letra no era la buena. Vuelve al generador y saca otra.</p>
+    <a class="btn btn--primary" href="/">Ir al generador</a>
+  </div>
+</BaseLayout>
+
+<style>
+  .notfound {
+    padding-block: var(--space-7);
+    text-align: center;
+    display: grid;
+    justify-items: center;
+    gap: var(--space-3);
+  }
+
+  .notfound__tile {
+    display: grid;
+    place-items: center;
+    width: 8rem;
+    height: 8rem;
+    margin: 0;
+    border: 3px solid var(--ink);
+    border-radius: var(--radius-l);
+    background: var(--card);
+    box-shadow: 6px 6px 0 var(--accent), 6px 6px 0 2px var(--ink);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 5rem;
+    line-height: 1;
+  }
+</style>

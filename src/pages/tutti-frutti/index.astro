@@ -1,0 +1,145 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Generator from '../../components/Generator.astro';
+import Faq from '../../components/Faq.astro';
+import RelatedLinks from '../../components/RelatedLinks.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import { TRADITIONAL_COLUMNS } from '../../data/categories';
+import { webApplication } from '../../data/schema';
+
+const title = 'Tutti Frutti online: letra al azar, categorías y reglas | LetraLista';
+const description =
+  'Juega al Tutti Frutti con una letra al azar, columnas clásicas o categorías nuevas y cuenta atrás. Reglas, puntuación y consejos para ganar.';
+const path = '/tutti-frutti/';
+const columns = TRADITIONAL_COLUMNS.tuttiFrutti;
+
+const faq = [
+  {
+    q: '¿Cómo se elige la letra en el Tutti Frutti tradicional?',
+    a: 'Un jugador recita el abecedario en voz baja y otro dice «¡basta!». La letra en la que se para es la de la ronda. Este generador hace lo mismo, pero sin trampas y sin repetir letras.',
+  },
+  {
+    q: '¿Quién puede cantar «Basta»?',
+    a: 'El primer jugador que completa todas las columnas. En ese momento todos dejan de escribir. Si usáis la cuenta atrás, la ronda termina al sonar la alarma.',
+  },
+  {
+    q: '¿Qué pasa si dos jugadores ponen la misma palabra?',
+    a: 'Normalmente cada uno se lleva 5 puntos en lugar de 10. Lo importante es acordarlo antes de empezar.',
+  },
+];
+
+const jsonLd = [webApplication(Astro.site!, path, 'Tutti Frutti online', description)];
+const breadcrumbs = [
+  { name: 'Inicio', path: '/' },
+  { name: 'Tutti Frutti', path },
+];
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} breadcrumbs={breadcrumbs}>
+  <div class="wrap print-host">
+    <PageIntro
+      title="Tutti Frutti online"
+      lead="La letra y las columnas, listas en un toque. Carga las columnas clásicas o saca categorías nuevas, pon la cuenta atrás y a escribir."
+    />
+    <Generator
+      mode="full"
+      label="Generador para jugar al Tutti Frutti"
+      preset={{ label: 'Columnas clásicas', categories: columns }}
+    />
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <section aria-labelledby="que-es">
+        <h2 id="que-es">¿Qué es el Tutti Frutti?</h2>
+        <p>
+          Es el nombre con el que se conoce en Argentina, Uruguay y Paraguay al juego de lápiz y papel en el que hay que
+          escribir, lo más rápido posible, una palabra por columna que empiece con una letra concreta. Es el mismo juego que
+          en España se llama Stop y en México, <a href="/basta/">Basta</a>.
+        </p>
+      </section>
+
+      <section aria-labelledby="columnas">
+        <h2 id="columnas">Las columnas clásicas</h2>
+        <p>
+          Cada familia tiene las suyas, pero estas son las más repetidas. Pulsa «Columnas clásicas» en el generador para
+          cargarlas:
+        </p>
+        <ol class="columns-list">
+          {columns.map((column) => <li>{column}</li>)}
+        </ol>
+        <p>
+          ¿Ya te las sabes de memoria? Pulsa «Otras categorías» para jugar con una lista distinta, o elige el pack Divertido
+          o Creativo en Ajustes.
+        </p>
+      </section>
+
+      <section aria-labelledby="como">
+        <h2 id="como">Cómo se juega, paso a paso</h2>
+        <ol>
+          <li>Cada jugador dibuja una tabla con una columna por categoría y una más para los puntos.</li>
+          <li>Saca la letra con el generador (o con el método del abecedario en voz baja).</li>
+          <li>
+            Todos completan una palabra por columna. El primero que termina grita «¡Basta para mí, basta para todos!» y se
+            dejan los lápices. Con la cuenta atrás, se termina al sonar la alarma.
+          </li>
+          <li>Se leen las respuestas columna por columna y se reparten los puntos.</li>
+          <li>Nueva letra y otra ronda. Gana quien más puntos suma al final.</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="puntos">
+        <h2 id="puntos">Puntuación</h2>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Puntuación del Tutti Frutti</caption>
+            <thead>
+              <tr>
+                <th scope="col">Situación</th>
+                <th scope="col">Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Palabra correcta que nadie más puso</td>
+                <td>10</td>
+              </tr>
+              <tr>
+                <td>Palabra correcta repetida</td>
+                <td>5</td>
+              </tr>
+              <tr>
+                <td>Único jugador con esa columna completa</td>
+                <td>20</td>
+              </tr>
+              <tr>
+                <td>Vacía o incorrecta</td>
+                <td>0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="consejos">
+        <h2 id="consejos">Consejos para ganar</h2>
+        <ul>
+          <li>Empieza por las columnas difíciles: las fáciles se completan en segundos al final.</li>
+          <li>Evita la primera palabra que se te ocurre: probablemente sea la misma que la de los demás y valga 5 puntos.</li>
+          <li>En «Cosa» vale casi todo: es la columna salvavidas.</li>
+        </ul>
+      </section>
+
+      <Faq items={faq} />
+    </div>
+
+    <RelatedLinks current={path} />
+  </div>
+</BaseLayout>
+
+<style>
+  .columns-list {
+    columns: 2;
+    column-gap: var(--space-6);
+  }
+</style>

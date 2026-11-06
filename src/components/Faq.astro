@@ -1,0 +1,24 @@
+---
+export interface FaqItem {
+  q: string;
+  a: string;
+}
+interface Props {
+  items: readonly FaqItem[];
+  title?: string;
+  id?: string;
+}
+const { items, title = 'Preguntas frecuentes', id = 'preguntas' } = Astro.props;
+---
+
+<section class="faq" aria-labelledby={id}>
+  <h2 id={id}>{title}</h2>
+  {
+    items.map((item) => (
+      <details>
+        <summary>{item.q}</summary>
+        <p>{item.a}</p>
+      </details>
+    ))
+  }
+</section>

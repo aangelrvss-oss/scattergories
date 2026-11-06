@@ -1,0 +1,488 @@
+---
+import Icon from './Icon.astro';
+import { PACKS } from '../data/categories';
+import { SPANISH_ALPHABET, DIFFICULT_LETTERS } from '../data/letters/alphabet';
+import { MIN_CATEGORIES, MAX_CATEGORIES, DEFAULT_CATEGORY_COUNT } from '../utils/settings';
+import { MAX_CATEGORY_LENGTH } from '../utils/categories';
+import type { GeneratorMode } from '../types/game';
+
+interface Props {
+  mode: GeneratorMode;
+}
+const { mode } = Astro.props;
+const showLetters = mode !== 'categories';
+const showCategories = mode !== 'letters';
+---
+
+<dialog class="settings" id="ajustes" aria-labelledby="ajustes-titulo" data-el="settings">
+  <form method="dialog" class="settings__inner" data-el="settings-form">
+    <header class="settings__head">
+      <h2 id="ajustes-titulo">Ajustes</h2>
+      <button class="icon-btn" type="submit" value="close" title="Cerrar">
+        <Icon name="close" />
+        <span class="sr-only">Cerrar ajustes</span>
+      </button>
+    </header>
+
+    <div class="settings__body">
+      {
+        showCategories && (
+          <fieldset class="settings__group">
+            <legend>Pack de categorías</legend>
+            <div class="packs">
+              {PACKS.map((pack) => (
+                <label class="pack">
+                  <input type="radio" name="pack" value={pack.id} checked={pack.id === 'clasico'} />
+                  <span class="pack__body">
+                    <strong>{pack.name}</strong>
+                    <span>{pack.description}</span>
+                    <small>{pack.categories.length} categorías</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )
+      }
+
+      {
+        showCategories && (
+          <fieldset class="settings__group">
+            <legend>Número de categorías por ronda</legend>
+            <div class="range-row">
+              <input
+                type="range"
+                name="categoryCount"
+                id="cantidad-categorias"
+                min={MIN_CATEGORIES}
+                max={MAX_CATEGORIES}
+                step="1"
+                value={DEFAULT_CATEGORY_COUNT}
+                aria-describedby="cantidad-valor"
+              />
+              <output id="cantidad-valor" for="cantidad-categorias" data-el="count-output">
+                {DEFAULT_CATEGORY_COUNT}
+              </output>
+            </div>
+          </fieldset>
+        )
+      }
+
+      {
+        showLetters && (
+          <fieldset class="settings__group">
+            <legend>Letras en juego</legend>
+            <label class="switch">
+              <input type="checkbox" name="difficult" />
+              <span>
+                Incluir letras difíciles <small>({DIFFICULT_LETTERS.join(', ')})</small>
+              </span>
+            </label>
+            <p class="settings__hint">O elige una a una las letras que pueden salir:</p>
+            <div class="letter-grid" role="group" aria-label="Letras habilitadas">
+              {SPANISH_ALPHABET.map((letter) => (
+                <label class="letter-toggle">
+                  <input type="checkbox" name="letters" value={letter} />
+                  <span>{letter}</span>
+                </label>
+              ))}
+            </div>
+            <p class="settings__row">
+              <button class="btn btn--small" type="button" data-action="letters-default">
+                Letras por defecto
+              </button>
+              <button class="btn btn--small" type="button" data-action="letters-all">
+                Todas
+              </button>
+              <span class="settings__meta" data-el="letters-count" aria-live="polite" />
+            </p>
+          </fieldset>
+        )
+      }
+
+      {
+        showCategories && (
+          <fieldset class="settings__group">
+            <legend>Mis categorías</legend>
+            <p class="settings__hint">Añade categorías propias. Se guardan en este navegador.</p>
+            <div class="add-row">
+              <label class="sr-only" for="nueva-categoria">
+                Nueva categoría
+              </label>
+              <input
+                type="text"
+                id="nueva-categoria"
+                data-el="custom-input"
+                maxlength={MAX_CATEGORY_LENGTH}
+                placeholder="Ej.: Personaje de videojuego"
+                autocomplete="off"
+                enterkeyhint="done"
+              />
+              <button class="btn btn--small" type="button" data-action="custom-add">
+                <Icon name="plus" />
+                Añadir
+              </button>
+            </div>
+            <ul class="custom-list" data-el="custom-list" aria-label="Tus categorías" />
+            <div class="radio-row" role="radiogroup" aria-label="Cómo usar tus categorías">
+              <label>
+                <input type="radio" name="customMode" value="mix" checked /> Mezclar con el pack
+              </label>
+              <label>
+                <input type="radio" name="customMode" value="only" /> Solo las mías
+              </label>
+              <label>
+                <input type="radio" name="customMode" value="off" /> No usarlas
+              </label>
+            </div>
+          </fieldset>
+        )
+      }
+
+      {
+        showCategories && (
+          <fieldset class="settings__group">
+            <legend>Categorías descartadas</legend>
+            <p class="settings__hint" data-el="hidden-summary">
+              No has descartado ninguna categoría.
+            </p>
+            <ul class="custom-list" data-el="hidden-list" aria-label="Categorías descartadas" />
+            <p class="settings__row">
+              <button class="btn btn--small" type="button" data-action="hidden-restore">
+                Recuperar todas
+              </button>
+            </p>
+          </fieldset>
+        )
+      }
+
+      <fieldset class="settings__group">
+        <legend>Temporizador y sonido</legend>
+        <label class="switch">
+          <input type="checkbox" name="autoStartTimer" />
+          <span>Empezar la cuenta atrás automáticamente en cada ronda</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="sound" checked />
+          <span>Sonido al terminar el tiempo</span>
+        </label>
+      </fieldset>
+    </div>
+
+    <footer class="settings__foot">
+      <button class="btn btn--ghost btn--small" type="button" data-action="settings-reset">Restablecer ajustes</button>
+      <button class="btn btn--primary" type="submit" value="close">Listo</button>
+    </footer>
+  </form>
+</dialog>
+
+<style is:global>
+  .settings {
+    width: min(40rem, calc(100% - 1.5rem));
+    max-height: min(90vh, 52rem);
+    max-height: min(90dvh, 52rem);
+    padding: 0;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-l);
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 8px 8px 0 var(--ink);
+  }
+
+  .settings::backdrop {
+    background: rgb(31 27 23 / 0.55);
+  }
+
+  .settings[open] {
+    animation: dialog-in 0.18s ease-out;
+  }
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  .settings__inner {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+  }
+
+  .settings__head,
+  .settings__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    flex: none;
+  }
+
+  .settings__head {
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .settings__head h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .settings__foot {
+    border-top: 2px solid var(--ink);
+    background: var(--paper);
+  }
+
+  .settings__body {
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    overscroll-behavior: contain;
+  }
+
+  .settings__group {
+    border: 0;
+    margin: 0;
+    padding: var(--space-4) 0;
+    border-bottom: 1.5px solid var(--line);
+    min-width: 0;
+  }
+
+  .settings__group:last-child {
+    border-bottom: 0;
+  }
+
+  .settings__group legend {
+    padding: 0;
+    margin-bottom: var(--space-3);
+    font-family: var(--font-display);
+    font-weight: 750;
+    font-size: 1.15rem;
+  }
+
+  .settings__hint {
+    margin: 0 0 var(--space-2);
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+
+  .settings__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 0;
+  }
+
+  .settings__meta {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .packs {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  @media (min-width: 34rem) {
+    .packs {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .pack {
+    position: relative;
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius);
+    cursor: pointer;
+    background: var(--paper);
+  }
+
+  .pack:has(input:checked) {
+    border-color: var(--ink);
+    background: var(--accent-soft);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+
+  .pack input {
+    margin-top: 0.3rem;
+    accent-color: var(--accent);
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: none;
+  }
+
+  .pack__body {
+    display: grid;
+    gap: 0.1rem;
+    line-height: 1.35;
+  }
+
+  .pack__body span {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .pack__body small {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .range-row input {
+    flex: 1;
+    accent-color: var(--accent);
+    min-height: 2.5rem;
+  }
+
+  .range-row output {
+    min-width: 2.5ch;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-align: right;
+  }
+
+  .switch {
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+    margin-bottom: var(--space-2);
+    cursor: pointer;
+    line-height: 1.4;
+  }
+
+  .switch input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.1rem;
+    accent-color: var(--accent);
+    flex: none;
+  }
+
+  .switch small {
+    color: var(--ink-soft);
+  }
+
+  .letter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+    gap: 0.35rem;
+  }
+
+  .letter-toggle {
+    position: relative;
+  }
+
+  .letter-toggle input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .letter-toggle span {
+    display: grid;
+    place-items: center;
+    height: 2.6rem;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius-s);
+    font-family: var(--font-display);
+    font-weight: 750;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    background: var(--paper);
+    text-decoration: line-through;
+    text-decoration-color: var(--line-strong);
+  }
+
+  .letter-toggle input:checked + span {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    text-decoration: none;
+  }
+
+  .letter-toggle input:focus-visible + span {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .add-row {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .add-row input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-s);
+    background: var(--paper);
+    font-size: 1rem;
+  }
+
+  .custom-list {
+    list-style: none;
+    margin: var(--space-2) 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .custom-list li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0 0.1rem 0 0.75rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: var(--paper);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  .custom-list .icon-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .custom-list .icon-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-2);
+    font-size: 0.95rem;
+  }
+
+  .radio-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    min-height: 2rem;
+  }
+
+  .radio-row input {
+    accent-color: var(--accent);
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+</style>

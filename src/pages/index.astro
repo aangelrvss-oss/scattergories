@@ -1,0 +1,174 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Generator from '../components/Generator.astro';
+import Faq from '../components/Faq.astro';
+import RelatedLinks from '../components/RelatedLinks.astro';
+import PageIntro from '../components/PageIntro.astro';
+import { PACKS } from '../data/categories';
+import { DEFAULT_LETTERS } from '../data/letters/alphabet';
+import { faqPage, webApplication } from '../data/schema';
+import { SITE } from '../data/site';
+
+const title = 'Scattergories en español: generador de letras y categorías | LetraLista';
+const description =
+  'Genera una letra al azar y una lista de categorías para jugar a Scattergories, Stop, Basta o Tutti Frutti. Con temporizador, sin repetir letras y gratis.';
+
+const site = Astro.site!;
+const totalCategories = PACKS.reduce((sum, pack) => sum + pack.categories.length, 0);
+
+const faq = [
+  {
+    q: '¿Es gratis? ¿Tengo que registrarme?',
+    a: 'Es completamente gratis y no hace falta cuenta. Abres la página y pulsas «Nueva ronda». Tus ajustes se guardan solo en tu navegador.',
+  },
+  {
+    q: '¿Se pueden repetir las letras?',
+    a: 'No. Cada letra sale una sola vez hasta que se han usado todas las letras activas. Entonces empieza un nuevo ciclo, y nunca se repite seguida la letra que acaba de salir. Puedes reiniciar el historial cuando quieras.',
+  },
+  {
+    q: '¿Por qué no salen la K, la Q, la W, la X, la Y ni la Z?',
+    a: 'Porque hay muy pocas palabras en español que empiecen por ellas y suelen arruinar la ronda. Puedes activarlas en Ajustes, todas a la vez o una a una.',
+  },
+  {
+    q: '¿Está la Ñ?',
+    a: 'Sí. La Ñ forma parte del alfabeto por defecto. Si te parece demasiado difícil, puedes desactivarla en Ajustes.',
+  },
+  {
+    q: '¿Puedo añadir mis propias categorías?',
+    a: 'Sí. En Ajustes, apartado «Mis categorías», puedes escribir las tuyas y elegir si se mezclan con el pack, si se usan solo las tuyas o si no se usan. También puedes descartar las categorías que no te gusten.',
+  },
+  {
+    q: '¿Funciona en el móvil?',
+    a: 'Sí, está pensado primero para móvil. Puedes dejar el teléfono en el centro de la mesa en pantalla completa con la cuenta atrás en marcha.',
+  },
+  {
+    q: '¿Cuántos jugadores pueden jugar?',
+    a: 'Desde dos personas hasta las que quepan alrededor de la mesa. Cada jugador necesita papel y boli; el generador se encarga de la letra, las categorías y el tiempo.',
+  },
+];
+
+const jsonLd = [
+  webApplication(site, '/', `${SITE.name}: generador de Scattergories en español`, description),
+  faqPage(faq),
+];
+---
+
+<BaseLayout title={title} description={description} path="/" jsonLd={jsonLd}>
+  <div class="wrap print-host">
+    <PageIntro
+      title="Generador de Scattergories en español"
+      lead="Una letra al azar, una lista de categorías y una cuenta atrás. Todo lo que necesitas para jugar a Stop, Basta o Tutti Frutti con papel y boli."
+    />
+    <Generator mode="full" label="Generador de rondas de Scattergories" />
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <section aria-labelledby="como-jugar">
+        <h2 id="como-jugar">Cómo se juega</h2>
+        <ol>
+          <li>
+            <strong>Reparte papel y boli.</strong> Cada jugador escribe la lista de categorías que aparece en pantalla (o
+            imprime la hoja con el botón «Imprimir hoja»).
+          </li>
+          <li>
+            <strong>Pulsa «Nueva ronda».</strong> Sale una letra y una lista de 12 categorías (puedes elegir entre 5 y 20). Puedes cambiar la letra, la
+            lista entera o una sola categoría si no os convence.
+          </li>
+          <li>
+            <strong>Pon la cuenta atrás.</strong> Elige 1, 1:30, 2 o 3 minutos (o el tiempo que queráis) y pulsa «Empezar».
+            Todos escriben una palabra por categoría que empiece por la letra.
+          </li>
+          <li>
+            <strong>¡Stop!</strong> Cuando suena la alarma, se dejan los bolis y se leen las respuestas en voz alta,
+            categoría por categoría.
+          </li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="puntuacion">
+        <h2 id="puntuacion">Puntuación más habitual</h2>
+        <p>
+          Cada grupo tiene sus normas de la casa, pero la forma más extendida de puntuar en español es esta. Decididla antes
+          de empezar para evitar discusiones:
+        </p>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Puntos por respuesta</caption>
+            <thead>
+              <tr>
+                <th scope="col">Respuesta</th>
+                <th scope="col">Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Válida y nadie más la ha puesto</td>
+                <td>10</td>
+              </tr>
+              <tr>
+                <td>Válida pero repetida con otro jugador</td>
+                <td>5</td>
+              </tr>
+              <tr>
+                <td>Eres el único que ha rellenado la categoría</td>
+                <td>20 (opcional)</td>
+              </tr>
+              <tr>
+                <td>En blanco, inventada o que no empieza por la letra</td>
+                <td>0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          En la versión de Scattergories con lista fija, lo normal es sumar 1 punto por respuesta única y 0 si se repite. Las
+          dos formas funcionan con este generador.
+        </p>
+      </section>
+
+      <section aria-labelledby="nombres">
+        <h2 id="nombres">Un juego, muchos nombres</h2>
+        <p>
+          En España casi todo el mundo lo conoce como <strong>Stop</strong>; en México y buena parte de Centroamérica, como
+          <a href="/basta/">Basta</a>; en Argentina, Uruguay y Paraguay, como <a href="/tutti-frutti/">Tutti Frutti</a>; y
+          en otros lugares, como Mercadito, Alto el lápiz o Scattergories, por el juego de mesa comercial. Las reglas
+          cambian poco: una letra, varias categorías y alguien que grita «¡Stop!» (o se acaba el tiempo).
+        </p>
+      </section>
+
+      <section aria-labelledby="packs">
+        <h2 id="packs">Seis packs de categorías</h2>
+        <p>
+          El generador incluye {totalCategories} categorías repartidas en seis packs. Elige uno en Ajustes antes de empezar la
+          ronda: las categorías de un pack nunca se mezclan con las de otro.
+        </p>
+        <ul>
+          {
+            PACKS.map((pack) => (
+              <li>
+                <strong>{pack.name}:</strong> {pack.description.toLowerCase()} ({pack.categories.length} categorías)
+              </li>
+            ))
+          }
+        </ul>
+        <p>
+          ¿Quieres verlas todas? Están en la página de <a href="/categorias-stop/">categorías para Stop</a>.
+        </p>
+      </section>
+
+      <section aria-labelledby="letras">
+        <h2 id="letras">Las letras</h2>
+        <p>
+          Por defecto juegan {DEFAULT_LETTERS.length} letras: {DEFAULT_LETTERS.join(', ')}. Las letras se sortean con el
+          generador criptográfico del navegador, así que cada sorteo es imparcial y no sigue ninguna secuencia
+          predeterminada. Si solo necesitas la letra, usa el <a href="/generador-letras/">generador de letras aleatorias</a>.
+        </p>
+      </section>
+
+      <Faq items={faq} />
+    </div>
+
+    <RelatedLinks current="/" />
+  </div>
+</BaseLayout>

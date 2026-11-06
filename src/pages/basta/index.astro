@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Generator from '../../components/Generator.astro';
+import Faq from '../../components/Faq.astro';
+import RelatedLinks from '../../components/RelatedLinks.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import { TRADITIONAL_COLUMNS } from '../../data/categories';
+import { webApplication } from '../../data/schema';
+
+const title = 'Basta online: generador de letra y categorías para jugar | LetraLista';
+const description =
+  'Juega Basta con letra al azar, columnas de siempre o categorías nuevas y cronómetro. Reglas, puntuación y cómo llevar el total de cada ronda.';
+const path = '/basta/';
+const columns = TRADITIONAL_COLUMNS.basta;
+
+const faq = [
+  {
+    q: '¿Basta y Stop son el mismo juego?',
+    a: 'Sí. Basta es el nombre que se usa en México y en buena parte de Centroamérica; en España se le llama Stop y en Argentina, Tutti Frutti. Las reglas son prácticamente iguales.',
+  },
+  {
+    q: '¿Se pueden usar nombres propios?',
+    a: 'En columnas como «Nombre» o «Ciudad, estado o país», sí. En «Cosa» o «Animal», lo habitual es no aceptar marcas ni nombres propios. Decididlo antes de empezar.',
+  },
+  {
+    q: '¿Cuánto tiempo se da en cada ronda?',
+    a: 'En el Basta clásico no hay tiempo: la ronda termina cuando alguien completa su fila. Si quieres un ritmo más justo, usa la cuenta atrás de 60 o 90 segundos.',
+  },
+];
+
+const jsonLd = [webApplication(Astro.site!, path, 'Basta online', description)];
+const breadcrumbs = [
+  { name: 'Inicio', path: '/' },
+  { name: 'Basta', path },
+];
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} breadcrumbs={breadcrumbs}>
+  <div class="wrap print-host">
+    <PageIntro
+      title="Basta online"
+      lead="Letra al azar, columnas de siempre y cronómetro. Saca papel y pluma: la ronda empieza en un clic."
+    />
+    <Generator mode="full" label="Generador para jugar Basta" preset={{ label: 'Columnas de siempre', categories: columns }} />
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <section aria-labelledby="reglas">
+        <h2 id="reglas">Reglas del Basta</h2>
+        <ol>
+          <li>
+            Cada jugador dibuja una tabla con las columnas de la ronda y una última columna de <strong>Total</strong>.
+          </li>
+          <li>Se saca la letra. En el juego tradicional, alguien recita el abecedario en silencio hasta que otro dice «¡alto!».</li>
+          <li>Todos escriben una palabra por columna que empiece con esa letra.</li>
+          <li>
+            Quien completa primero su fila grita «¡Basta!» y todos sueltan la pluma. Si usáis el cronómetro, la ronda termina
+            con la alarma.
+          </li>
+          <li>Se comparan respuestas, se anotan los puntos en la columna Total y se pasa a la siguiente letra.</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="columnas">
+        <h2 id="columnas">Columnas de siempre</h2>
+        <p>
+          Estas son las columnas más comunes en el Basta. Pulsa «Columnas de siempre» en el generador para cargarlas, o
+          «Otras categorías» para variar:
+        </p>
+        <div class="table-wrap">
+          <table class="sheet">
+            <caption>Ejemplo de hoja de Basta con la letra M</caption>
+            <thead>
+              <tr>
+                {columns.map((c) => <th scope="col">{c}</th>)}
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mariana</td>
+                <td>Martínez</td>
+                <td>Monterrey</td>
+                <td>Mapache</td>
+                <td>Mango</td>
+                <td>Morado</td>
+                <td>Mesa</td>
+                <td>Maná</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="puntos">
+        <h2 id="puntos">Puntuación</h2>
+        <ul>
+          <li><strong>100 puntos</strong> si tu respuesta es válida y nadie más la escribió.</li>
+          <li><strong>50 puntos</strong> si otro jugador escribió la misma palabra.</li>
+          <li><strong>0 puntos</strong> si la casilla está vacía o la palabra no vale.</li>
+        </ul>
+        <p>
+          Muchas familias usan 10 y 5 puntos en lugar de 100 y 50: el resultado es el mismo, solo cambia el tamaño de los
+          números.
+        </p>
+      </section>
+
+      <section aria-labelledby="variantes">
+        <h2 id="variantes">Variantes para no aburrirse</h2>
+        <ul>
+          <li><strong>Basta temático:</strong> todas las columnas de un tema, como comida o cine. Prueba el pack Cultura general.</li>
+          <li><strong>Basta absurdo:</strong> categorías como «Excusa para llegar tarde». Elige el pack Divertido.</li>
+          <li><strong>Basta por equipos:</strong> parejas que comparten hoja y discuten cada respuesta en voz baja.</li>
+        </ul>
+      </section>
+
+      <Faq items={faq} />
+    </div>
+
+    <RelatedLinks current={path} />
+  </div>
+</BaseLayout>
+
+<style>
+  .sheet caption {
+    caption-side: bottom;
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-align: left;
+  }
+
+  .sheet th,
+  .sheet td {
+    white-space: nowrap;
+  }
+</style>

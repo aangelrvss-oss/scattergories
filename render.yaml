@@ -1,0 +1,30 @@
+# Blueprint de Render: sitio estático generado con Astro.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: spanish-scattergories
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Astro 7 necesita Node.js >= 22.23.4 (Render usa la última 22.x).
+      - key: NODE_VERSION
+        value: "22"
+      # URL pública: se usa en canonical, sitemap y Open Graph.
+      # Cámbiala si el nombre del servicio o el dominio son distintos.
+      - key: SITE_URL
+        value: https://spanish-scattergories.onrender.com
+    headers:
+      # Los archivos de /_astro llevan hash en el nombre: caché de un año.
+      - path: /_astro/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /fonts/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

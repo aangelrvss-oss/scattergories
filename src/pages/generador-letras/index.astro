@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Generator from '../../components/Generator.astro';
+import Faq from '../../components/Faq.astro';
+import RelatedLinks from '../../components/RelatedLinks.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import { DEFAULT_LETTERS, DIFFICULT_LETTERS, SPANISH_ALPHABET } from '../../data/letters/alphabet';
+import { webApplication } from '../../data/schema';
+
+const title = 'Generador de letras aleatorias del abecedario español (con Ñ) | LetraLista';
+const description =
+  'Saca letras al azar del abecedario español, con Ñ y sin repetir. Elige qué letras participan y usa la cuenta atrás para jugar a Stop o a cualquier juego de palabras.';
+const path = '/generador-letras/';
+
+const faq = [
+  {
+    q: '¿Cómo evita el generador que se repitan las letras?',
+    a: 'Guarda en tu navegador las letras que ya han salido y solo sortea entre las que faltan. Cuando se agotan, empieza un nuevo ciclo automáticamente sin repetir la última letra.',
+  },
+  {
+    q: '¿Puedo sacar solo vocales o un grupo concreto de letras?',
+    a: 'Sí. En Ajustes puedes activar y desactivar cada letra por separado: solo vocales, solo consonantes o las letras que esté trabajando tu clase.',
+  },
+  {
+    q: '¿La CH y la LL cuentan como letras?',
+    a: 'No. Desde 2010 la Real Academia Española considera la CH y la LL dígrafos, no letras del abecedario. Las palabras con CH se juegan con la C y las que empiezan por LL, con la L.',
+  },
+  {
+    q: '¿Es realmente aleatorio?',
+    a: 'Sí. Usa crypto.getRandomValues(), el generador de números aleatorios criptográficamente seguro del navegador, con un método que evita sesgos. No hay listas ni secuencias predefinidas.',
+  },
+];
+
+const jsonLd = [webApplication(Astro.site!, path, 'Generador de letras aleatorias', description)];
+const breadcrumbs = [
+  { name: 'Inicio', path: '/' },
+  { name: 'Generador de letras', path },
+];
+---
+
+<BaseLayout title={title} description={description} path={path} jsonLd={jsonLd} breadcrumbs={breadcrumbs}>
+  <div class="wrap print-host">
+    <PageIntro
+      title="Generador de letras aleatorias"
+      lead="Una letra del abecedario español al azar, con Ñ y sin repetir hasta que hayan salido todas. Ideal para Stop, juegos de palabras y clases de lengua."
+    />
+    <Generator mode="letters" label="Generador de letras aleatorias" />
+  </div>
+
+  <div class="wrap">
+    <div class="prose">
+      <section aria-labelledby="para-que">
+        <h2 id="para-que">¿Para qué sirve?</h2>
+        <ul>
+          <li><strong>Stop, Basta o Tutti Frutti</strong>, si ya tenéis vuestras columnas de siempre en papel.</li>
+          <li>
+            <strong>Juegos de palabras</strong> en el coche o en la sobremesa: «di un animal que empiece por…», el juego de
+            la cadena, adivinanzas…
+          </li>
+          <li>
+            <strong>En clase</strong>: dictados, vocabulario, lluvia de ideas o para elegir el orden de exposición sin que
+            nadie proteste.
+          </li>
+          <li><strong>Dibujar o improvisar</strong> a partir de una letra, como reto creativo.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="abecedario">
+        <h2 id="abecedario">El abecedario español</h2>
+        <p>
+          El abecedario tiene {SPANISH_ALPHABET.length} letras: {SPANISH_ALPHABET.join(', ')}. Para jugar, el generador usa
+          por defecto {DEFAULT_LETTERS.length}, y deja fuera {DIFFICULT_LETTERS.join(', ')} porque hay muy pocas palabras
+          que empiecen por ellas. Puedes incluirlas con un solo toque en Ajustes.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Letras incluidas y excluidas por defecto</caption>
+            <thead>
+              <tr>
+                <th scope="col">Grupo</th>
+                <th scope="col">Letras</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Incluidas por defecto</td>
+                <td>{DEFAULT_LETTERS.join(' ')}</td>
+              </tr>
+              <tr>
+                <td>Difíciles (opcionales)</td>
+                <td>{DIFFICULT_LETTERS.join(' ')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="sin-repetir">
+        <h2 id="sin-repetir">Sin repetir y a tu ritmo</h2>
+        <p>
+          Debajo de la letra verás las que ya han salido y cuántas quedan. El historial se comparte con el
+          <a href="/">generador completo</a>, así que puedes alternar entre ambas páginas sin que se repitan letras. Si
+          empezáis una partida nueva, pulsa «Reiniciar letras».
+        </p>
+      </section>
+
+      <Faq items={faq} />
+    </div>
+
+    <RelatedLinks current={path} />
+  </div>
+</BaseLayout>
